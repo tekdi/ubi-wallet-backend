@@ -13,7 +13,7 @@ export class UserDocsService {
     private userDocsRepository: Repository<UserDoc>,
   ) {}
 
-  async create(createUserDocDto: CreateUserDocDto, vcfile:any){
+  async create(createUserDocDto: CreateUserDocDto, vcfile:any, ssoId:string){
     try {
       if(createUserDocDto.doc_id != undefined){
         try {
@@ -49,7 +49,7 @@ export class UserDocsService {
         });
       }
       
-      const userDoc = this.userDocsRepository.create(createUserDocDto);
+      const userDoc = this.userDocsRepository.create({...createUserDocDto,sso_id:ssoId});
       await this.userDocsRepository.save(userDoc);
       return new SuccessResponse({
         statusCode: 200, // HTTP OK status
