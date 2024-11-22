@@ -14,7 +14,11 @@ export class UserDoc {
   @IsUUID()
   sso_id: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 255 })
+  @IsString()
+  doc_name: string;
+
+  @Column({ type: 'varchar', length: 255 })
   @IsString()
   doc_type: string;
 
