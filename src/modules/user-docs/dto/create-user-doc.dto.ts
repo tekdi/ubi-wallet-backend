@@ -7,6 +7,9 @@ export class CreateUserDocDto {
   doc_id?: string;
 
   @IsString()
+  doc_name: string;
+
+  @IsString()
   doc_type: string;
 
   @IsOptional()
