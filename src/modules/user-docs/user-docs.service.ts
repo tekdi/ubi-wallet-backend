@@ -48,6 +48,21 @@ export class UserDocsService {
           errorMessage: `Document with doc_id ${createUserDocDto.doc_id} already exists`,
         });
       }
+      const checkAadhaarExist = await this.userDocsRepository.findOne({
+        where: { sso_id: ssoId , doc_subtype:'aadhaar' },
+      });
+      if(checkAadhaarExist && createUserDocDto.doc_subtype==="aadhaar" ) {
+        return new ErrorResponse({
+          statusCode: 409,
+          errorMessage: `Aadhaar already added to wallet`,
+        });
+      }
+      if (!checkAadhaarExist && createUserDocDto.doc_subtype!=="aadhaar") {
+        return new ErrorResponse({
+          statusCode: 400,
+          errorMessage: `Please add Aadhaar first before adding any other document to wallet`,
+        });
+      }
       
       const userDoc = this.userDocsRepository.create({...createUserDocDto,sso_id:ssoId});
       await this.userDocsRepository.save(userDoc);
