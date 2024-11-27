@@ -50,7 +50,7 @@ export class AuthService {
   public async register(body) {
     try {
       // Step 1: Check if mobile number exists in the database
-      await this.checkMobileExistence(body?.phone_number);
+      await this.checkMobileExistence(body?.phoneNumber);
 
       // Step 2: Prepare user data for Keycloak registration
       const dataToCreateUser = this.prepareUserData(body);
@@ -75,22 +75,24 @@ export class AuthService {
 
       // Add data to beneficiary DB
       const beneficiaryUrl = `${process.env.BENEFICIARY_BACKEND_URL}/users/create`
-      const beneficiaryData = {
-        first_name: body.first_name,
-        last_name: body.last_name,
-        email: body.email || '',
-        phone_number: body.mobile || '',
+      const beneficiaryData = JSON.stringify({
+        firstName: body.firstName,
+        lastName: body.lastName,
+        phoneNumber: body.phoneNumber || '',
         sso_provider: 'keycloak',
-        sso_id: userData.keycloak_id,
-        created_at: new Date(),
-      };
+        sso_id: userData.keycloak_id
+      });
       await axios.post(beneficiaryUrl,beneficiaryData,{
         headers: {
           'Content-Type': 'application/json',
-          // Authorization: `Bearer ${token.access_token}`,
           Accept: '*/*',
         },
-      });
+      }).then((response) => {
+        console.log(JSON.stringify(response.data));
+      })
+      .catch((error) => {
+        console.log(JSON.stringify(error));
+      });;
 
       // Step 6: Return success response
       return new SuccessResponse({
@@ -121,9 +123,9 @@ export class AuthService {
   private prepareUserData(body) {
     return {
       enabled: 'true',
-      firstName: body?.first_name,
-      lastName: body?.last_name,
-      username: body.phone_number,
+      firstName: body?.firstName,
+      lastName: body?.lastName,
+      username: body.phoneNumber,
       credentials: [
         // {
         //   type: 'password',
@@ -133,9 +135,9 @@ export class AuthService {
       ],
       attributes: {
         // Custom user attributes
-        phoneNumber: '+91' + body?.phone_number,
-        firstName: body?.first_name,
-        lastName: body?.last_name,
+        phoneNumber: '+91' + body?.phoneNumber,
+        firstName: body?.firstName,
+        lastName: body?.lastName,
       },
     };
   }
