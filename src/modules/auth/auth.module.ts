@@ -4,9 +4,9 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
-// import { UserService } from '@modules/users/users.service';
+import { UserService } from '../users/users.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// import { User } from '@entities/user.entity';
+import { User } from '../users/entity/user.entity';
 // import { UserDoc } from '@entities/user_docs.entity';
 // import { UserInfo } from '@entities/user_info.entity';
 // import { EncryptionService } from 'src/common/helper/encryptionService';
@@ -18,7 +18,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [
     KeycloakModule,
     TypeOrmModule.forFeature([
-      // User,
+      User,
       // UserDoc,
       // UserInfo,
       // Consent,
@@ -30,12 +30,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     AuthService,
     ConfigService,
     KeycloakService,
-    // UserService,
+    UserService,
     // EncryptionService,
     // LoggerService,
   ],
   exports: [AuthService, 
-    // UserService, 
+    UserService, 
     // EncryptionService
     ],
 })

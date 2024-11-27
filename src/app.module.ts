@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { HttpModule } from '@nestjs/axios';
 import { UserDocsModule } from './modules/user-docs/user-docs.module';
+import { UsersModule } from './modules/users/users.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -18,6 +19,7 @@ import { UserDocsModule } from './modules/user-docs/user-docs.module';
       global: true,
     },
     UserDocsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
