@@ -31,10 +31,10 @@ export class UserService {
   }
   async createKeycloakData(body: any): Promise<User> {
     const user = this.userRepository.create({
-      first_name: body.first_name,
-      last_name: body.last_name,
+      firstName: body.firstName,
+      lastName: body.lastName,
       email: body.email || '',
-      phone_number: body.mobile || '',
+      phoneNumber: body.phoneNumber || '',
       sso_provider: 'keycloak',
       sso_id: body.keycloak_id,
       created_at: new Date(),
@@ -44,7 +44,7 @@ export class UserService {
 
   async findByMobile(mobile: string): Promise<User | undefined> {
     return await this.userRepository.findOne({
-      where: { phone_number: mobile },
+      where: { phoneNumber: mobile },
     });
   }
 }

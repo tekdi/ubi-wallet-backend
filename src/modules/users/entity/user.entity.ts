@@ -14,22 +14,22 @@ import {
     user_id: string;
   
     @Column({ length: 50 })
-    first_name: string;
+    firstName: string;
   
     @Column({ length: 50, nullable: true })
-    middle_name: string;
+    middleName: string;
   
     @Column({ length: 50 })
-    last_name: string;
+    lastName: string;
   
     @Column({ length: 100, unique: true })
     email: string;
   
     @Column({ length: 100, nullable: true })
-    phone_number: string;
+    phoneNumber: string;
   
     @Column({ type: 'date', nullable: true })
-    date_of_birth: Date;
+    dob: Date;
   
     @Column({ length: 255 })
     sso_provider: string;
