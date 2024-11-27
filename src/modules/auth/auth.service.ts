@@ -1,4 +1,4 @@
-// import { UserService } from '@modules/users/users.service';
+import { UserService } from '../users/users.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ErrorResponse } from 'src/common/responses/error-response';
@@ -20,7 +20,7 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly keycloakService: KeycloakService,
-    // private readonly userService: UserService,
+    private readonly userService: UserService,
     // private readonly loggerService: LoggerService,
   ) {}
 
@@ -47,152 +47,176 @@ export class AuthService {
     }
   }
 
-  // public async register(body) {
-  //   try {
-  //     // Step 1: Check if mobile number exists in the database
-  //     await this.checkMobileExistence(body?.phone_number);
+  public async register(body) {
+    try {
+      // Step 1: Check if mobile number exists in the database
+      await this.checkMobileExistence(body?.phone_number);
 
-  //     // Step 2: Prepare user data for Keycloak registration
-  //     const dataToCreateUser = this.prepareUserData(body);
+      // Step 2: Prepare user data for Keycloak registration
+      const dataToCreateUser = this.prepareUserData(body);
 
-  //     // Step 3: Get Keycloak admin token
-  //     const token = await this.keycloakService.getAdminKeycloakToken();
-  //     this.validateToken(token);
+      // Step 3: Get Keycloak admin token
+      const token = await this.keycloakService.getAdminKeycloakToken();
+      this.validateToken(token);
 
-  //     // Step 4: Register user in Keycloak
-  //     const keycloakId = await this.registerUserInKeycloak(
-  //       dataToCreateUser,
-  //       token.access_token,
-  //     );
+      // Step 4: Register user in Keycloak
+      const keycloakId = await this.registerUserInKeycloak(
+        dataToCreateUser,
+        token.access_token,
+      );
 
-  //     // Step 5: Register user in PostgreSQL
-  //     const userData = {
-  //       ...body,
-  //       keycloak_id: keycloakId,
-  //       username: dataToCreateUser.username,
-  //     };
-  //     const user = await this.userService.createKeycloakData(userData);
+      // Step 5: Register user in PostgreSQL
+      const userData = {
+        ...body,
+        keycloak_id: keycloakId,
+        username: dataToCreateUser.username,
+      };
+      const user = await this.userService.createKeycloakData(userData);
 
-  //     // Step 6: Return success response
-  //     return new SuccessResponse({
-  //       statusCode: HttpStatus.OK,
-  //       message: 'User created successfully',
-  //       data: user,
-  //     });
-  //   } catch (error) {
-  //     return this.handleRegistrationError(error, body?.keycloak_id);
-  //   }
-  // }
+      // Add data to beneficiary DB
+      const beneficiaryUrl = `${process.env.BENEFICIARY_BACKEND_URL}/users/create`
+      const beneficiaryData = {
+        first_name: body.first_name,
+        last_name: body.last_name,
+        email: body.email || '',
+        phone_number: body.mobile || '',
+        sso_provider: 'keycloak',
+        sso_id: userData.keycloak_id,
+        created_at: new Date(),
+      };
+      await axios.post(beneficiaryUrl,beneficiaryData,{
+        headers: {
+          'Content-Type': 'application/json',
+          // Authorization: `Bearer ${token.access_token}`,
+          Accept: '*/*',
+        },
+      });
 
-  // private async checkMobileExistence(phoneNumber: string) {
-  //   if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
-  //     throw new ErrorResponse({
-  //       statusCode: HttpStatus.BAD_REQUEST,
-  //       errorMessage: 'Invalid phone number format',
-  //     });
-  //   }
-  //   const isMobileExist = await this.userService.findByMobile(phoneNumber);
-  //   if (isMobileExist) {
-  //     throw new ErrorResponse({
-  //       statusCode: HttpStatus.CONFLICT,
-  //       errorMessage: 'Mobile Number Already Exists',
-  //     });
-  //   }
-  // }
+      // Step 6: Return success response
+      return new SuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: 'User created successfully',
+        data: user,
+      });
+    } catch (error) {
+      return this.handleRegistrationError(error, body?.keycloak_id);
+    }
+  }
+  private async checkMobileExistence(phoneNumber: string) {
+    if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
+      throw new ErrorResponse({
+        statusCode: HttpStatus.BAD_REQUEST,
+        errorMessage: 'Invalid phone number format',
+      });
+    }
+    const isMobileExist = await this.userService.findByMobile(phoneNumber);
+    if (isMobileExist) {
+      throw new ErrorResponse({
+        statusCode: HttpStatus.CONFLICT,
+        errorMessage: 'Mobile Number Already Exists',
+      });
+    }
+  }
 
-  // private prepareUserData(body) {
-  //   return {
-  //     enabled: 'true',
-  //     firstName: body?.first_name,
-  //     lastName: body?.last_name,
-  //     username: body.phone_number,
-  //     credentials: [
-  //       {
-  //         type: 'password',
-  //         value: body?.password,
-  //         temporary: false,
-  //       },
-  //     ],
-  //   };
-  // }
+  private prepareUserData(body) {
+    return {
+      enabled: 'true',
+      firstName: body?.first_name,
+      lastName: body?.last_name,
+      username: body.phone_number,
+      credentials: [
+        // {
+        //   type: 'password',
+        //   value: body?.password,
+        //   temporary: false,
+        // },
+      ],
+      attributes: {
+        // Custom user attributes
+        phoneNumber: '+91' + body?.phone_number,
+        firstName: body?.first_name,
+        lastName: body?.last_name,
+      },
+    };
+  }
 
-  // private validateToken(token) {
-  //   if (!token?.access_token) {
-  //     throw new ErrorResponse({
-  //       statusCode: HttpStatus.UNAUTHORIZED,
-  //       errorMessage: 'Unable to get Keycloak token',
-  //     });
-  //   }
-  // }
+  private validateToken(token) {
+    if (!token?.access_token) {
+      throw new ErrorResponse({
+        statusCode: HttpStatus.UNAUTHORIZED,
+        errorMessage: 'Unable to get Keycloak token',
+      });
+    }
+  }
 
-  // private async registerUserInKeycloak(userData, accessToken) {
-  //   const registerUserRes = await this.keycloakService.registerUser(
-  //     userData,
-  //     accessToken,
-  //   );
+  private async registerUserInKeycloak(userData, accessToken) {
+    const registerUserRes = await this.keycloakService.registerUser(
+      userData,
+      accessToken,
+    );
 
-  //   if (registerUserRes.error) {
-  //     if (registerUserRes?.error?.response?.status === 409) {
-  //       this.loggerService.error(
-  //         'User already exists!',
-  //         registerUserRes?.error,
-  //       );
-  //       throw new ErrorResponse({
-  //         statusCode: HttpStatus.CONFLICT,
-  //         errorMessage: 'User already exists!',
-  //       });
-  //     }
-  //     throw new ErrorResponse({
-  //       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //       errorMessage: registerUserRes.error.message,
-  //     });
-  //   }
+    if (registerUserRes.error) {
+      if (registerUserRes?.error?.response?.status === 409) {
+        // this.loggerService.error(
+        //   'User already exists!',
+        //   registerUserRes?.error,
+        // );
+        throw new ErrorResponse({
+          statusCode: HttpStatus.CONFLICT,
+          errorMessage: 'User already exists!',
+        });
+      }
+      throw new ErrorResponse({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        errorMessage: registerUserRes.error.message,
+      });
+    }
 
-  //   if (registerUserRes.headers.location) {
-  //     const locationParts = registerUserRes.headers.location.split('/');
-  //     if (locationParts?.length === 0) {
-  //       throw new ErrorResponse({
-  //         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //         errorMessage: 'Invalid location header format',
-  //       });
-  //     }
-  //     const keycloakId = registerUserRes?.headers?.location.split('/').pop();
-  //     if (!keycloakId) {
-  //       throw new ErrorResponse({
-  //         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //         errorMessage: 'Unable to extract Keycloak ID',
-  //       });
-  //     }
-  //     return keycloakId;
-  //   }
+    if (registerUserRes.headers.location) {
+      const locationParts = registerUserRes.headers.location.split('/');
+      if (locationParts?.length === 0) {
+        throw new ErrorResponse({
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          errorMessage: 'Invalid location header format',
+        });
+      }
+      const keycloakId = registerUserRes?.headers?.location.split('/').pop();
+      if (!keycloakId) {
+        throw new ErrorResponse({
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          errorMessage: 'Unable to extract Keycloak ID',
+        });
+      }
+      return keycloakId;
+    }
 
-  //   throw new ErrorResponse({
-  //     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //     errorMessage: 'Unable to create user in Keycloak',
-  //   });
-  // }
+    throw new ErrorResponse({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      errorMessage: 'Unable to create user in Keycloak',
+    });
+  }
 
-  // private async handleRegistrationError(error, keycloakId) {
-  //   this.loggerService.error('Error during user registration:', error);
+  private async handleRegistrationError(error, keycloakId) {
+    // this.loggerService.error('Error during user registration:', error);
 
-  //   if (keycloakId) {
-  //     await this.keycloakService.deleteUser(keycloakId);
-  //     this.loggerService.error(
-  //       'Keycloak user deleted due to failure in PostgreSQL creation',
-  //       error,
-  //     );
-  //   }
+    if (keycloakId) {
+      await this.keycloakService.deleteUser(keycloakId);
+      // this.loggerService.error(
+      //   'Keycloak user deleted due to failure in PostgreSQL creation',
+      //   error,
+      // );
+    }
 
-  //   if (error instanceof ErrorResponse) {
-  //     return error;
-  //   }
+    if (error instanceof ErrorResponse) {
+      return error;
+    }
 
-  //   return new ErrorResponse({
-  //     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-  //     errorMessage:
-  //       'Error during user registration. Keycloak user has been rolled back.',
-  //   });
-  // }
+    return new ErrorResponse({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      errorMessage:
+        'Error during user registration. Keycloak user has been rolled back.',
+    });
+  }
 
   public async logout(req, response) {
     const accessToken = req.body.access_token;
