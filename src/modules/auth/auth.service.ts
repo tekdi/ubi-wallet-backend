@@ -88,7 +88,6 @@ export class AuthService {
           Accept: '*/*',
         },
       }).then((response) => {
-        console.log(JSON.stringify(response.data));
       })
       .catch((error) => {
         console.log(JSON.stringify(error));
