@@ -33,7 +33,6 @@ export class UserService {
     const user = this.userRepository.create({
       firstName: body.firstName,
       lastName: body.lastName,
-      email: body.email || '',
       phoneNumber: body.phoneNumber || '',
       sso_provider: 'keycloak',
       sso_id: body.keycloak_id,
