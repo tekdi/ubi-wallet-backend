@@ -22,7 +22,7 @@ import {
     @Column({ length: 50 })
     lastName: string;
   
-    @Column({ length: 100, unique: true })
+    @Column({ length: 100, unique: true ,nullable: true })
     email: string;
   
     @Column({ length: 100, nullable: true })
