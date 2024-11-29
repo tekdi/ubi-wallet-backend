@@ -6,6 +6,7 @@ import { CreateUserDocDto } from './dto/create-user-doc.dto';
 import { ErrorResponse } from 'src/common/responses/error-response';
 import { SuccessResponse } from 'src/common/responses/success-response';
 import axios from 'axios'
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class UserDocsService {
   constructor(
@@ -37,7 +38,20 @@ export class UserDocsService {
         createUserDocDto.doc_data = vcJsonData;
         createUserDocDto.issuer = vcJsonData.issuer;
       }
-
+      if(createUserDocDto.doc_id == undefined ){
+        let uniqueUUID;
+        let isUnique = false;
+        while (!isUnique) {
+          uniqueUUID = 'did:ew:' + uuidv4();
+          const existDoc = await this.userDocsRepository.findOne({
+            where: { doc_id: uniqueUUID },
+          });
+          if (!existDoc) {
+            isUnique = true; // UUID is unique
+          }
+        }
+        createUserDocDto.doc_id = uniqueUUID;
+      }
       const existingDoc = await this.userDocsRepository.findOne({
         where: { doc_id: createUserDocDto.doc_id },
       });
