@@ -1,6 +1,6 @@
-name: Deploy to Wallet DEV
-on: 
-  push:  
+name: Deploy to DEV
+on:
+  push:
     branches:
       - main
 jobs: 
