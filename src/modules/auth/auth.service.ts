@@ -91,7 +91,7 @@ export class AuthService {
       })
       .catch((error) => {
         console.log(JSON.stringify(error));
-      });;
+      });
 
       // Step 6: Return success response
       return new SuccessResponse({
@@ -103,6 +103,96 @@ export class AuthService {
       return this.handleRegistrationError(error, body?.keycloak_id);
     }
   }
+  public async registerWithUsernamePassword(body) {
+    try {
+      // Step 2: Prepare user data for Keycloak registration
+      const dataToCreateUser = this.prepareUserDataV2(body);
+      let { password, ...rest } = dataToCreateUser;
+      let userName = dataToCreateUser.username;
+
+      // Step 3: Get Keycloak admin token
+      const token = await this.keycloakService.getAdminKeycloakToken();
+      this.validateToken(token);
+
+      // Step 4: Register user in Keycloak
+      const keycloakId = await this.registerUserInKeycloak(
+        rest,
+        token.access_token,
+      );
+
+      // Step 5: Register user in PostgreSQL
+      const userData = {
+        ...body,
+        keycloak_id: keycloakId,
+        username: dataToCreateUser.username,
+      };
+      const user = await this.userService.createKeycloakData(userData);
+
+      const beneficiaryUrl = `${process.env.BENEFICIARY_BACKEND_URL}/users/create`
+      const beneficiaryData = JSON.stringify({
+        firstName: body.firstName,
+        lastName: body.lastName,
+        phoneNumber: body.phoneNumber || '',
+        sso_provider: 'keycloak',
+        sso_id: userData.keycloak_id
+      });
+      await axios.post(beneficiaryUrl,beneficiaryData,{
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: '*/*',
+        },
+      }).then((response) => {
+      })
+      .catch((error) => {
+        console.log(JSON.stringify(error));
+      });
+
+
+      // Step 6: Return success response
+      return new SuccessResponse({
+        statusCode: HttpStatus.OK,
+        message: 'User created successfully',
+        data: { user, userName, password },
+      });
+    } catch (error) {
+      return this.handleRegistrationError(error, body?.keycloak_id);
+    }
+  }
+
+  private prepareUserDataV2(body) {
+    const trimmedFirstName = body?.firstName?.trim();
+    const trimmedLastName = body?.lastName?.trim();
+    const trimmedPhoneNumber = body?.phoneNumber?.trim();
+    const password =
+      body?.password?.trim() || process.env.SIGNUP_DEFAULT_PASSWORD;
+
+    return {
+      enabled: 'true',
+      firstName: trimmedFirstName,
+      lastName: trimmedLastName,
+      username:
+        trimmedFirstName +
+        '_' +
+        trimmedLastName?.charAt(0) +
+        '_' +
+        trimmedPhoneNumber?.slice(-4),
+      credentials: [
+        {
+          type: 'password',
+          value: password,
+          temporary: false,
+        },
+      ],
+      password, // Return the password directly
+      attributes: {
+        // Custom user attributes
+        phoneNumber: '+91' + trimmedPhoneNumber,
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
+      },
+    };
+  }
+
   private async checkMobileExistence(phoneNumber: string) {
     if (!phoneNumber || !/^\d{10}$/.test(phoneNumber)) {
       throw new ErrorResponse({
