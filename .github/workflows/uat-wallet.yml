@@ -1,6 +1,6 @@
-name: Deploy to Wallet UAT
-
-on: [push]
+name: Deploy to UAT
+on:
+  workflow_dispatch:
 jobs: 
   Deploy:
     name: Deploy to UAT
