@@ -16,22 +16,23 @@ export class UserDocsService {
 
   async create(createUserDocDto: CreateUserDocDto, vcfile:any, ssoId:string){
     try {
-      if(createUserDocDto.doc_id != undefined){
-        try {
-          const docData = await this.fetchDocData(createUserDocDto.doc_id);
-          createUserDocDto.doc_data = docData;
-          createUserDocDto.issuer = docData.issuer;
-        } catch (error) {
-          console.log(error);
-          if (error instanceof NotFoundException) {
-            return new ErrorResponse({
-              statusCode: 404,
-              errorMessage: error.message,
-            });
-          }
-          throw error;
-        }
-      }else if(vcfile != undefined){
+      // if(createUserDocDto.doc_id != undefined){
+      //   try {
+      //     // const docData = await this.fetchDocData(createUserDocDto.doc_id);
+      //     // createUserDocDto.doc_data = docData;
+      //     createUserDocDto.issuer = createUserDocDto.doc_data.issuer;
+      //   } catch (error) {
+      //     console.log(error);
+      //     if (error instanceof NotFoundException) {
+      //       return new ErrorResponse({
+      //         statusCode: 404,
+      //         errorMessage: error.message,
+      //       });
+      //     }
+      //     throw error;
+      //   }
+      // }else 
+      if(vcfile != undefined){
         const vcJsonString = vcfile.buffer.toString();
         const vcJsonData = JSON.parse(vcJsonString);
         createUserDocDto.doc_id = vcJsonData.id;
