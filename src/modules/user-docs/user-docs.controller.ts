@@ -14,13 +14,7 @@ import {
 } from '@nestjs/common';
 import { UserDocsService } from './user-docs.service';
 import { CreateUserDocDto } from './dto/create-user-doc.dto';
-import {
-  ApiBasicAuth,
-  ApiConsumes,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBasicAuth, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { UserDoc } from './entity/user-doc.entity';
 import { AuthGuard } from '../auth/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
