@@ -17,7 +17,7 @@ export class UserDocsService {
   constructor(
     @InjectRepository(UserDoc)
     private readonly userDocsRepository: Repository<UserDoc>,
-  ) {}
+  ) { }
 
   async create(createUserDocDto: CreateUserDocDto, vcfile: any, ssoId: string) {
     try {
@@ -68,19 +68,19 @@ export class UserDocsService {
           errorMessage: `Document with doc_id ${createUserDocDto.doc_id} already exists`,
         });
       }
-      const checkAadhaarExist = await this.userDocsRepository.findOne({
-        where: { sso_id: ssoId, doc_subtype: 'aadhaar' },
+      const checkMarksheetExists = await this.userDocsRepository.findOne({
+        where: { sso_id: ssoId, doc_subtype: 'marksheet' },
       });
-      if (checkAadhaarExist && createUserDocDto.doc_subtype === 'aadhaar') {
-        return new ErrorResponse({
-          statusCode: 409,
-          errorMessage: `Aadhaar already added to wallet`,
-        });
-      }
-      if (!checkAadhaarExist && createUserDocDto.doc_subtype !== 'aadhaar') {
+      // if (checkMarksheetExists && createUserDocDto.doc_subtype === 'aadhaar') {
+      //   return new ErrorResponse({
+      //     statusCode: 409,
+      //     errorMessage: `Aadhaar already added to wallet`,
+      //   });
+      // }
+      if (!checkMarksheetExists && createUserDocDto.doc_subtype !== 'marksheet') {
         return new ErrorResponse({
           statusCode: 400,
-          errorMessage: `Please add Aadhaar first before adding any other document to wallet`,
+          errorMessage: `Please add Marksheet first before adding any other document to wallet`,
         });
       }
 
