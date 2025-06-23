@@ -2,14 +2,14 @@ import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import {
   IWalletAdapter,
   IWalletAdapterWithOtp,
-} from '../../adapters/interfaces/wallet-adapter.interface';
-import { OnboardUserDto } from '../../dto/onboard-user.dto';
-import { UploadVcDto } from '../../dto/upload-vc.dto';
+} from '../adapters/interfaces/wallet-adapter.interface';
+import { OnboardUserDto } from '../dto/onboard-user.dto';
+import { UploadVcDto } from '../dto/upload-vc.dto';
 import {
   LoginRequestDto,
   LoginVerifyDto,
   ResendOtpDto,
-} from '../../dto/login.dto';
+} from '../dto/login.dto';
 
 @Injectable()
 export class WalletService {

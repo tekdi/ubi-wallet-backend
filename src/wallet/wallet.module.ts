@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
-import { getAdapterBasedOnEnv } from '../../adapters/adapter.factory';
+import { getAdapterBasedOnEnv } from '../adapters/adapter.factory';
 
 @Module({
   providers: [

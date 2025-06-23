@@ -1,21 +1,19 @@
 import { Controller, Post, Get, Body, Param } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { OnboardUserDto } from '../../dto/onboard-user.dto';
-import { UploadVcDto } from '../../dto/upload-vc.dto';
+import { OnboardUserDto } from '../dto/onboard-user.dto';
+import { UploadVcDto } from '../dto/upload-vc.dto';
 import {
   LoginRequestDto,
   LoginVerifyDto,
   ResendOtpDto,
-} from '../../dto/login.dto';
+} from '../dto/login.dto';
 
-@Controller('wallet')
+@Controller('api/wallet')
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   @Post('onboard')
   async onboardUser(@Body() data: OnboardUserDto) {
-    console.log('onboardUser endpoint hit');
-    console.log(data, '====================')
     return await this.walletService.onboardUser(data);
   }
 

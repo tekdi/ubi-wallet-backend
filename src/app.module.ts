@@ -1,32 +1,17 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DatabaseModule } from './database.module';
-import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './modules/auth/auth.module';
-import { HttpModule } from '@nestjs/axios';
-import { UserDocsModule } from './modules/user-docs/user-docs.module';
-import { UsersModule } from './modules/users/users.module';
-import { OtpModule } from './modules/otp/otp.module';
-import { EncryptionService } from './common/helper/encryptionService';
-import { WalletModule } from './modules/wallet/wallet.module';
+import { WalletModule } from './wallet/wallet.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    DatabaseModule,
-    AuthModule,
-    {
-      ...HttpModule.register({}),
-      global: true,
-    },
-    UserDocsModule,
-    UsersModule,
-    OtpModule,
-    WalletModule
+    WalletModule,
   ],
   controllers: [AppController],
-  providers: [AppService,EncryptionService],
+  providers: [AppService],
 })
 export class AppModule {}

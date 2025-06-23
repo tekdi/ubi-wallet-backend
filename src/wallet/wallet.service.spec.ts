@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WalletService } from './wallet.service';
-import { IWalletAdapter } from '../../adapters/interfaces/wallet-adapter.interface';
+import { IWalletAdapter } from '../adapters/interfaces/wallet-adapter.interface';
 
 describe('WalletService', () => {
   let service: WalletService;
