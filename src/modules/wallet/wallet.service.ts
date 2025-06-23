@@ -18,7 +18,6 @@ export class WalletService {
   ) {}
 
   async onboardUser(data: OnboardUserDto) {
-    console.log('=============')
     return await this.walletAdapter.onboardUser(data);
   }
 
