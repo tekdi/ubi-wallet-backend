@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UsePipes, ValidationPipe } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
@@ -13,11 +13,13 @@ export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   @Post('onboard')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async onboardUser(@Body() data: OnboardUserDto) {
     return await this.walletService.onboardUser(data);
   }
 
   @Post('login')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async login(@Body() data: LoginRequestDto) {
     return await this.walletService.login(data);
   }

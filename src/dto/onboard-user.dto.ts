@@ -5,7 +5,6 @@ export class OnboardUserDto {
   @IsNotEmpty()
   name: string;
 
-  @IsPhoneNumber()
   @IsNotEmpty()
   phone: string;
 

@@ -11,8 +11,8 @@ export interface OnboardedUserResponse {
 }
 
 export interface LoginRequestDto {
-  email: string;
-  deviceInfo?: string;
+  username: string;
+  password: string;
 }
 
 export interface LoginVerifyDto {
@@ -21,8 +21,9 @@ export interface LoginVerifyDto {
 }
 
 export interface LoginResponse {
-  sessionId: string;
+  statusCode: Number;
   message: string;
+  data: object
 }
 
 export interface LoginVerifyResponse {

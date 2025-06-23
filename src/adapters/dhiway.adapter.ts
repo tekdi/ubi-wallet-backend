@@ -19,10 +19,12 @@ import {
 export class DhiwayAdapter implements IWalletAdapterWithOtp {
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly beneficiaryBackendURI: string;
 
   constructor() {
     this.baseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
+    this.beneficiaryBackendURI = process.env.BENEFICIARY_BACKEND_URI || '';
   }
 
   private getHeaders() {
@@ -58,17 +60,16 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   async login(data: LoginRequestDto): Promise<LoginResponse> {
     try {
       const response = await axios.post(
-        `${this.baseUrl}/api/v1/otp/login`,
+        `${this.beneficiaryBackendURI}/auth/login`,
         {
-          email: data.email,
-          deviceInfo: data.deviceInfo || 'Web Application',
+          username: data.username,
+          password: data.password
         },
-        { headers: this.getHeaders() },
       );
-
-      const responseData = response.data as any;
+      const responseData = response?.data as any;
       return {
-        sessionId: responseData.sessionId || responseData.id,
+        statusCode: responseData?.statusCode,
+        data: responseData?.data,
         message: responseData.message || 'OTP sent successfully',
       };
     } catch (error: any) {
@@ -245,5 +246,3 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     }
   }
 }
-
-// 240996
