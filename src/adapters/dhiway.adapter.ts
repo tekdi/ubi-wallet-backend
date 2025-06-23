@@ -45,7 +45,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       );
 
       const responseData = response.data as any;
-      console.log(responseData)
       return {
         accountId: responseData.accountId || data.externalUserId,
         token: responseData.token,
@@ -207,7 +206,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       // Parse the QR data to extract VC
       const parsedVC = this.extractVCFromQR(qrData);
-console.log(parsedVC,'=========')
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.baseUrl}/api/v1/message/create/${did}`,
