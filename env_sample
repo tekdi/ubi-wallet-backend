@@ -1,0 +1,4 @@
+PORT=3018
+WALLET_PROVIDER=dhiway
+DHIWAY_API_BASE=https://wallet-api.depwd.onest.dhiway.net
+DHIWAY_API_KEY=t4d449f5-b7c2-41ff-b80e-bf94390872b5

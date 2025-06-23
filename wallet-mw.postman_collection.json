@@ -1,0 +1,135 @@
+{
+  "info": {
+    "_postman_id": "wallet-mw-collection-id",
+    "name": "wallet-mw API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "API collection for wallet-mw endpoints."
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": ["{{baseUrl}}"],
+          "path": [""]
+        }
+      }
+    },
+    {
+      "name": "Onboard User",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"John Doe\",\n  \"phone\": \"+1234567890\",\n  \"externalUserId\": \"user123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/onboard",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "onboard"]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"user@example.com\",\n  \"deviceInfo\": \"Web Application\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "login"]
+        }
+      }
+    },
+    {
+      "name": "Login Verify",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"session123\",\n  \"otp\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/login/verify",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "login", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"session123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/login/resend-otp",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", "login", "resend-otp"]
+        }
+      }
+    },
+    {
+      "name": "Get All VCs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", ":user_id", "vcs"],
+          "variable": [{"key": "user_id", "value": "user123"}]
+        }
+      }
+    },
+    {
+      "name": "Get VC By ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs/:vcId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", ":user_id", "vcs", ":vcId"],
+          "variable": [
+            {"key": "user_id", "value": "user123"},
+            {"key": "vcId", "value": "vc123"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload VC from QR",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qrData\": \"sample-qr-data\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs/upload-qr",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "wallet", ":user_id", "vcs", "upload-qr"],
+          "variable": [{"key": "user_id", "value": "user123"}]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3012" }
+  ]
+} 
