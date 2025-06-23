@@ -9,6 +9,7 @@ import { UserDocsModule } from './modules/user-docs/user-docs.module';
 import { UsersModule } from './modules/users/users.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { EncryptionService } from './common/helper/encryptionService';
+import { WalletModule } from './modules/wallet/wallet.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,6 +24,7 @@ import { EncryptionService } from './common/helper/encryptionService';
     UserDocsModule,
     UsersModule,
     OtpModule,
+    WalletModule
   ],
   controllers: [AppController],
   providers: [AppService,EncryptionService],
