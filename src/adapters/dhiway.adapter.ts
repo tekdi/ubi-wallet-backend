@@ -55,13 +55,13 @@ interface Credential {
 @Injectable()
 export class DhiwayAdapter implements IWalletAdapterWithOtp {
   private readonly dhiwayBaseUrl: string;
-  private readonly DHIWAY_API_DEMO_URI: string;
+  private readonly DHIWAY_VC_ISSUER_INSTANCE_URI: string;
   private readonly apiKey: string;
 
   constructor(private readonly userService: UserService) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
-    this.DHIWAY_API_DEMO_URI = process.env.DHIWAY_API_DEMO_URI || '';
+    this.DHIWAY_VC_ISSUER_INSTANCE_URI = process.env.DHIWAY_VC_ISSUER_INSTANCE_URI || '';
   }
 
   private getHeaders() {
@@ -418,7 +418,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const splitqrData = qrData.split('/');
       const issuinceId = splitqrData[splitqrData.length - 1];
       const response = await axios.get(
-        `${this.DHIWAY_API_DEMO_URI}/m/${issuinceId}.vc`
+        `${this.DHIWAY_VC_ISSUER_INSTANCE_URI}/m/${issuinceId}.vc`
       );
       const vcData = response?.data;
       if (!vcData) {

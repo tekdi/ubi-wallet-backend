@@ -57,7 +57,7 @@ describe('WalletService', () => {
       lastName: 'Doe',
       externalUserId: 'user123',
       username: 'johndoe',
-      password: 'password123',
+      password: 'dummy',
       email: 'john@example.com',
     };
     const expectedResponse = {
@@ -81,7 +81,7 @@ describe('WalletService', () => {
   });
 
   it('should call login on adapter', async () => {
-    const loginData = { username: 'johndoe', password: 'password123' };
+    const loginData = { username: 'johndoe', password: 'dummy' };
     const expectedResponse = {
       statusCode: 200,
       message: 'Login successful',
