@@ -1,30 +1,30 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DatabaseModule } from './database.module';
-import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './modules/auth/auth.module';
-import { HttpModule } from '@nestjs/axios';
-import { UserDocsModule } from './modules/user-docs/user-docs.module';
-import { UsersModule } from './modules/users/users.module';
-import { OtpModule } from './modules/otp/otp.module';
-import { EncryptionService } from './common/helper/encryptionService';
+import { WalletModule } from './wallet/wallet.module';
+import { User } from './users/user.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    DatabaseModule,
-    AuthModule,
-    {
-      ...HttpModule.register({}),
-      global: true,
-    },
-    UserDocsModule,
-    UsersModule,
-    OtpModule,
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USERNAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'password',
+      database: process.env.DB_DATABASE || 'wallet_db',
+      entities: [User],
+      synchronize: process.env.NODE_ENV !== 'production', // Auto-create tables in development
+      logging: process.env.NODE_ENV !== 'production',
+    }),
+    WalletModule,
   ],
   controllers: [AppController],
-  providers: [AppService,EncryptionService],
+  providers: [AppService],
 })
 export class AppModule {}
