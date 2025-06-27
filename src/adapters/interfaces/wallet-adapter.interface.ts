@@ -38,7 +38,12 @@ export interface LoginResponse {
   data: {
     token: string;
     accountId: string;
-    user: any;
+      user: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          username: string;
+        };
   };
 }
 
@@ -67,7 +72,7 @@ export interface VCDetailsResponse {
   id: string;
   type: string;
   issuer: string;
-  credentialSubject: any;
+  credentialSubject: Record<string, unknown>;
 }
 
 export interface UploadResponse {

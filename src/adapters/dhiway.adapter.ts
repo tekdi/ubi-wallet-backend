@@ -137,7 +137,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       data: {
         token: '',
         accountId: '',
-        user: {},
+        user: { id: '', firstName: '', lastName: '', username: '' },
       },
     };
 
