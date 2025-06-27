@@ -25,7 +25,7 @@
         "header": [{"key": "Content-Type", "value": "application/json"}],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"John Doe\",\n  \"phone\": \"+1234567890\",\n  \"externalUserId\": \"user123\"\n}"
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"externalUserId\": \"user123\",\n  \"username\": \"johndoe\",\n  \"password\": \"password123\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+1234567890\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/wallet/onboard",
@@ -41,7 +41,7 @@
         "header": [{"key": "Content-Type", "value": "application/json"}],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"user@example.com\",\n  \"deviceInfo\": \"Web Application\"\n}"
+          "raw": "{\n  \"username\": \"johndoe\",\n  \"password\": \"password123\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/wallet/login",
@@ -86,12 +86,13 @@
       "name": "Get All VCs",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
         "url": {
-          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs",
+          "raw": "{{baseUrl}}/api/wallet/{{accountId}}/vcs",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "wallet", ":user_id", "vcs"],
-          "variable": [{"key": "user_id", "value": "user123"}]
+          "path": ["api", "wallet", "{{accountId}}", "vcs"]
         }
       }
     },
@@ -99,15 +100,13 @@
       "name": "Get VC By ID",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
         "url": {
-          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs/:vcId",
+          "raw": "{{baseUrl}}/api/wallet/{{accountId}}/vcs/{{vcId}}",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "wallet", ":user_id", "vcs", ":vcId"],
-          "variable": [
-            {"key": "user_id", "value": "user123"},
-            {"key": "vcId", "value": "vc123"}
-          ]
+          "path": ["api", "wallet", "{{accountId}}", "vcs", "{{vcId}}"]
         }
       }
     },
@@ -115,21 +114,26 @@
       "name": "Upload VC from QR",
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"qrData\": \"sample-qr-data\"\n}"
         },
         "url": {
-          "raw": "{{baseUrl}}/api/wallet/:user_id/vcs/upload-qr",
+          "raw": "{{baseUrl}}/api/wallet/{{accountId}}/vcs/upload-qr",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "wallet", ":user_id", "vcs", "upload-qr"],
-          "variable": [{"key": "user_id", "value": "user123"}]
+          "path": ["api", "wallet", "{{accountId}}", "vcs", "upload-qr"]
         }
       }
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3012" }
+    { "key": "baseUrl", "value": "http://localhost:3018" },
+    { "key": "token", "value": "your-bearer-token-here" },
+    { "key": "accountId", "value": "user123" },
+    { "key": "vcId", "value": "vc123" }
   ]
 } 

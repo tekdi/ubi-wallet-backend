@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Body, Param, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UsePipes,
+  ValidationPipe,
+  Headers,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
@@ -35,23 +45,46 @@ export class WalletController {
   }
 
   @Get(':user_id/vcs')
-  async getAllVCs(@Param('user_id') user_id: string) {
-    return await this.walletService.getAllVCs(user_id);
+  async getAllVCs(
+    @Param('user_id') user_id: string,
+    @Headers('authorization') authorization: string,
+  ) {
+    const token = this.extractToken(authorization);
+    return await this.walletService.getAllVCs(user_id, token);
   }
 
   @Get(':user_id/vcs/:vcId')
   async getVCById(
     @Param('user_id') user_id: string,
     @Param('vcId') vcId: string,
+    @Headers('authorization') authorization: string,
   ) {
-    return await this.walletService.getVCById(user_id, vcId);
+    const token = this.extractToken(authorization);
+    return await this.walletService.getVCById(user_id, vcId, token);
   }
 
   @Post(':user_id/vcs/upload-qr')
   async uploadVCFromQR(
     @Param('user_id') user_id: string,
     @Body() data: UploadVcDto,
+    @Headers('authorization') authorization: string,
   ) {
-    return await this.walletService.uploadVCFromQR(user_id, data);
+    const token = this.extractToken(authorization);
+    return await this.walletService.uploadVCFromQR(user_id, data, token);
+  }
+
+  private extractToken(authorization: string): string {
+    if (!authorization) {
+      throw new UnauthorizedException('Authorization header is required');
+    }
+
+    const parts = authorization.split(' ');
+    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+      throw new UnauthorizedException(
+        'Invalid authorization header format. Expected: Bearer <token>',
+      );
+    }
+
+    return parts[1];
   }
 }

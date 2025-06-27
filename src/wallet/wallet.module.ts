@@ -1,18 +1,19 @@
 import { Module } from '@nestjs/common';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
-import { getAdapterBasedOnEnv } from '../adapters/adapter.factory';
+import { UserModule } from '../users/user.module';
+import { UserService } from '../users/user.service';
+import { DhiwayAdapter } from '../adapters/dhiway.adapter';
 
 @Module({
+  imports: [UserModule],
   providers: [
     {
       provide: 'WALLET_ADAPTER',
-      useFactory: () => {
-        const AdapterClass = getAdapterBasedOnEnv(
-          process.env.WALLET_PROVIDER || '',
-        );
-        return new AdapterClass();
+      useFactory: (userService: UserService) => {
+        return new DhiwayAdapter(userService);
       },
+      inject: [UserService],
     },
     WalletService,
   ],

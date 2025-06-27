@@ -21,3 +21,10 @@ export class UploadResponse {
   status: string;
   vcId: string;
 }
+
+export class ApiResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: any;
+}

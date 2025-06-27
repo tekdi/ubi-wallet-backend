@@ -24,4 +24,4 @@ export class ResendOtpDto {
   @IsString()
   @IsNotEmpty()
   sessionId: string;
-} 
+}

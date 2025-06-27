@@ -51,15 +51,15 @@ export class WalletService {
     );
   }
 
-  async getAllVCs(user_id: string) {
-    return await this.walletAdapter.getAllVCs(user_id);
+  async getAllVCs(user_id: string, token: string) {
+    return await this.walletAdapter.getAllVCs(user_id, token);
   }
 
-  async getVCById(user_id: string, vcId: string) {
-    return await this.walletAdapter.getVCById(user_id, vcId);
+  async getVCById(user_id: string, vcId: string, token: string) {
+    return await this.walletAdapter.getVCById(user_id, vcId, token);
   }
 
-  async uploadVCFromQR(user_id: string, data: UploadVcDto) {
-    return await this.walletAdapter.uploadVCFromQR(user_id, data.qrData);
+  async uploadVCFromQR(user_id: string, data: UploadVcDto, token: string) {
+    return await this.walletAdapter.uploadVCFromQR(user_id, data.qrData, token);
   }
 }

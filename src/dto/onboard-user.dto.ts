@@ -1,14 +1,31 @@
-import { IsString, IsNotEmpty, IsPhoneNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional } from 'class-validator';
 
 export class OnboardUserDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  firstName: string;
 
+  @IsString()
   @IsNotEmpty()
-  phone: string;
+  lastName: string;
 
   @IsString()
   @IsNotEmpty()
   externalUserId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }
