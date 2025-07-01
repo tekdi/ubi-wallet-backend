@@ -521,12 +521,22 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     if (!qrData) {
       throw new Error('QR data is required');
     }
+    if (!qrData.startsWith('http://') && !qrData.startsWith('https://')) {
+      throw new Error('Invalid QR data: Must be a valid URI');
+    }
+        
     try {
       const splitqrData = qrData.split('/');
+      if (splitqrData.length < 2) {
+        throw new Error('Invalid QR data format');
+      }
       const issuinceId = splitqrData[splitqrData.length - 1];
-
+      if (!issuinceId) {
+        throw new Error('Invalid QR data: Missing credential ID');
+      }
       const response = await axios.get(
         `${this.DHIWAY_VC_ISSUER_INSTANCE_URI}/m/${issuinceId}.vc`,
+        { timeout: 10000 }
       );
       const vcData = response?.data as Record<string, unknown>;
       if (!vcData) {
