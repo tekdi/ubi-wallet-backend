@@ -57,20 +57,24 @@ describe('WalletService', () => {
       lastName: 'Doe',
       externalUserId: 'user123',
       username: 'johndoe',
-      password: 'dummy',
+      password: 'password123',
       email: 'john@example.com',
     };
     const expectedResponse = {
-      accountId: 'user123',
-      token: 'token123',
-      did: 'did:example:123',
-      user: {
-        id: 'uuid-123',
-        firstName: 'John',
-        lastName: 'Doe',
-        username: 'johndoe',
+      statusCode: 200,
+      message: 'User onboarded successfully',
+      data: {
         accountId: 'user123',
-        status: 'active',
+        token: 'token123',
+        did: 'did:example:123',
+        user: {
+          id: 'uuid-123',
+          firstName: 'John',
+          lastName: 'Doe',
+          username: 'johndoe',
+          accountId: 'user123',
+          status: 'active',
+        },
       },
     };
     mockAdapter.onboardUser.mockResolvedValue(expectedResponse);
@@ -81,7 +85,7 @@ describe('WalletService', () => {
   });
 
   it('should call login on adapter', async () => {
-    const loginData = { username: 'johndoe', password: 'dummy' };
+    const loginData = { username: 'johndoe', password: 'password123' };
     const expectedResponse = {
       statusCode: 200,
       message: 'Login successful',
@@ -106,9 +110,12 @@ describe('WalletService', () => {
   it('should call verifyLogin on adapter', async () => {
     const verifyData = { sessionId: 'session123', otp: '123456' };
     const expectedResponse = {
-      token: 'token123',
-      accountId: 'user123',
-      message: 'Login successful',
+      statusCode: 200,
+      message: 'Login verification successful',
+      data: {
+        token: 'token123',
+        accountId: 'user123',
+      },
     };
     mockAdapter.verifyLogin.mockResolvedValue(expectedResponse);
 
@@ -119,7 +126,10 @@ describe('WalletService', () => {
 
   it('should call resendOtp on adapter', async () => {
     const resendData = { sessionId: 'session123' };
-    const expectedResponse = { message: 'OTP resent successfully' };
+    const expectedResponse = {
+      statusCode: 200,
+      message: 'OTP resent successfully',
+    };
     mockAdapter.resendOtp.mockResolvedValue(expectedResponse);
 
     const result = await service.resendOtp(resendData);
@@ -130,14 +140,18 @@ describe('WalletService', () => {
   it('should call getAllVCs on adapter with token', async () => {
     const userId = 'user123';
     const token = 'bearer-token-123';
-    const expectedResponse = [
-      {
-        id: 'vc1',
-        name: 'Test Credential',
-        issuer: 'Test Issuer',
-        issuedAt: '2023-01-01T00:00:00Z',
-      },
-    ];
+    const expectedResponse = {
+      statusCode: 200,
+      message: 'VCs retrieved successfully',
+      data: [
+        {
+          id: 'vc1',
+          name: 'Test Credential',
+          issuer: 'Test Issuer',
+          issuedAt: '2023-01-01T00:00:00Z',
+        },
+      ],
+    };
     mockAdapter.getAllVCs.mockResolvedValue(expectedResponse);
 
     const result = await service.getAllVCs(userId, token);
@@ -150,10 +164,14 @@ describe('WalletService', () => {
     const vcId = 'vc123';
     const token = 'bearer-token-123';
     const expectedResponse = {
-      id: 'vc123',
-      type: 'TestCredential',
-      issuer: 'Test Issuer',
-      credentialSubject: { name: 'Test User' },
+      statusCode: 200,
+      message: 'Successfully fetched the VC with ID: vc123',
+      data: {
+        id: 'vc123',
+        type: 'TestCredential',
+        issuer: 'Test Issuer',
+        credentialSubject: { name: 'Test User' },
+      },
     };
     mockAdapter.getVCById.mockResolvedValue(expectedResponse);
 
@@ -167,8 +185,12 @@ describe('WalletService', () => {
     const uploadData = { qrData: 'qr-code-data' };
     const token = 'bearer-token-123';
     const expectedResponse = {
-      status: 'success',
-      vcId: 'uploaded-vc-123',
+      statusCode: 200,
+      message: 'VC uploaded successfully from QR',
+      data: {
+        status: 'success',
+        vcId: 'uploaded-vc-123',
+      },
     };
     mockAdapter.uploadVCFromQR.mockResolvedValue(expectedResponse);
 

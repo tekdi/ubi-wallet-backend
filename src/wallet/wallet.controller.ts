@@ -25,6 +25,7 @@ export class WalletController {
   @Post('onboard')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async onboardUser(@Body() data: OnboardUserDto) {
+    console.log('Onboard User Data:', data);
     return await this.walletService.onboardUser(data);
   }
 

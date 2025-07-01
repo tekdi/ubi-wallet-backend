@@ -50,6 +50,9 @@ interface Credential {
   };
   createdAt: string;
   updatedAt: string;
+  type?: string;
+  issuer?: { name?: string };
+  credentialVC?: string | Record<string, unknown>;
 }
 
 @Injectable()
@@ -61,7 +64,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   constructor(private readonly userService: UserService) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
-    this.DHIWAY_VC_ISSUER_INSTANCE_URI = process.env.DHIWAY_VC_ISSUER_INSTANCE_URI || '';
+    this.DHIWAY_VC_ISSUER_INSTANCE_URI =
+      process.env.DHIWAY_VC_ISSUER_INSTANCE_URI || '';
   }
 
   private getHeaders() {
@@ -81,10 +85,11 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   async onboardUser(data: OnboardUserDto): Promise<OnboardedUserResponse> {
     try {
       // First, create user in Dhiway wallet service
+      const externalUserId = data.externalUserId || data.username;
       const response = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/custom-user/create`,
         {
-          accountId: data.externalUserId,
+          accountId: externalUserId,
           name: `${data.firstName} ${data.lastName}`,
           phone: data.phone,
         },
@@ -92,7 +97,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       );
 
       const responseData = response.data as ApiResponse;
-      const accountId = responseData.accountId || data.externalUserId;
+      const accountId = externalUserId;
       const token = responseData.token || '';
       const did = responseData.did;
 
@@ -111,44 +116,41 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       });
 
       return {
-        accountId,
-        token,
-        did,
-        user: {
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          accountId: user.accountId,
-          status: user.status,
+        statusCode: 200,
+        message: 'User onboarded successfully',
+        data: {
+          accountId,
+          token,
+          did,
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            username: user.username,
+            accountId: user.accountId,
+            status: user.status,
+          },
         },
       };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to onboard user: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to onboard user: ${errorMessage}`,
+      };
     }
   }
 
   async login(data: LoginRequestDto): Promise<LoginResponse> {
-    const returnData: LoginResponse = {
-      statusCode: 200,
-      message: '',
-      data: {
-        token: '',
-        accountId: '',
-        user: { id: '', firstName: '', lastName: '', username: '' },
-      },
-    };
-
     try {
       // Find user in local database
       const user = await this.userService.findByUsername(data.username);
       if (!user) {
-        returnData.statusCode = 401;
-        returnData.message = 'Invalid credentials';
-
-        return returnData;
+        return {
+          statusCode: 401,
+          message: 'Invalid credentials',
+        };
       }
 
       // Validate password
@@ -157,18 +159,18 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         data.password,
       );
       if (!isValidPassword) {
-        returnData.statusCode = 401;
-        returnData.message = 'Invalid credentials';
-
-        return returnData;
+        return {
+          statusCode: 401,
+          message: 'Invalid credentials',
+        };
       }
 
       // Check if user is blocked
       if (user.blocked) {
-        returnData.statusCode = 403;
-        returnData.message = 'User account is blocked';
-
-        return returnData;
+        return {
+          statusCode: 403,
+          message: 'User account is blocked',
+        };
       }
 
       // Get fresh token from Dhiway if needed
@@ -207,7 +209,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to login: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to login: ${errorMessage}`,
+      };
     }
   }
 
@@ -225,14 +230,20 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const responseData = response.data as ApiResponse;
 
       return {
-        token: responseData.token || '',
-        accountId: responseData.accountId || responseData.userId || '',
-        message: responseData.message || 'Login successful',
+        statusCode: 200,
+        message: responseData.message || 'Login verification successful',
+        data: {
+          token: responseData.token || '',
+          accountId: responseData.accountId || responseData.userId || '',
+        },
       };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to verify login: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to verify login: ${errorMessage}`,
+      };
     }
   }
 
@@ -249,16 +260,20 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const responseData = response.data as ApiResponse;
 
       return {
+        statusCode: 200,
         message: responseData.message || 'OTP resent successfully',
       };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to resend OTP: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to resend OTP: ${errorMessage}`,
+      };
     }
   }
 
-  async getAllVCs(accountId: string, token: string): Promise<VCListResponse[]> {
+  async getAllVCs(accountId: string, token: string): Promise<VCListResponse> {
     try {
       // Get the credentials using the provided token
       const credentialsResponse = await axios.get(
@@ -268,7 +283,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       );
 
-      const credentialsData = credentialsResponse.data as Array<Credential>;
+      const credentialsData = credentialsResponse.data as Credential[];
 
       const credentials = credentialsData.map((cred) => ({
         id: cred.id,
@@ -277,11 +292,23 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         issuedAt: cred.createdAt || new Date().toISOString(),
       }));
 
-      return credentials || [];
+      // Filter out credentials where documentTitle is 'OTP'
+      const filteredCredentials = credentials.filter(
+        (cred) => cred.name !== 'otp',
+      );
+
+      return {
+        statusCode: 200,
+        message: 'VCs retrieved successfully',
+        data: filteredCredentials,
+      };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to get VCs: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to get VCs: ${errorMessage}`,
+      };
     }
   }
 
@@ -299,22 +326,72 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       );
 
-      const credentialsData = credentialResponse.data;
+      const credentialsData = credentialResponse.data as Credential[];
       const credential = credentialsData.find((cred) => cred.id === vcId);
+
       if (!credential) {
-        throw new Error('Credential not found');
+        return {
+          statusCode: 404,
+          message: `Credential not found with ID: ${vcId}`,
+        };
+      }
+
+      let credentialSubject = credential?.credentialVC;
+      if (credentialSubject && typeof credentialSubject === 'string') {
+        try {
+          credentialSubject = JSON.parse(credentialSubject) as Record<
+            string,
+            unknown
+          >;
+        } catch {
+          credentialSubject = {};
+        }
+      }
+
+      // Remove @context, id, start_date from credentialSubject and rename fields
+      if (credentialSubject && typeof credentialSubject === 'object') {
+        const credentialSubjectObj = credentialSubject;
+        const credentialSubjectData =
+          (credentialSubjectObj.credentialSubject as Record<string, unknown>) ||
+          {};
+
+        const { end_date, issue_date, ...rest } = credentialSubjectData;
+
+        // Rename end_date to 'Expiry Date' and issue_date to 'Issue Date'
+        const modifiedCredentialSubject: Record<string, unknown> = {
+          ...(rest as Record<string, unknown>),
+        };
+
+        if (end_date) {
+          modifiedCredentialSubject['Expiry Date'] = end_date;
+        }
+        if (issue_date) {
+          modifiedCredentialSubject['Issue Date'] = issue_date;
+        }
+
+        credentialSubjectObj.credentialSubject = modifiedCredentialSubject;
       }
 
       return {
-        id: credential.id,
-        type: credential.type || 'VerifiableCredential',
-        issuer: credential.issuer?.name || 'Unknown Issuer',
-        credentialSubject: credential.credentialSubject || {},
+        statusCode: 200,
+        message: `Successfully fetched the VC with ID: ${vcId}`,
+        data: {
+          id: credential.id,
+          type: credential.type || 'VerifiableCredential',
+          issuer: credential.issuer?.name || 'Unknown Issuer',
+          credentialSubject:
+            (credentialSubject as Record<string, unknown>)?.credentialSubject ||
+            {},
+        },
       };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to get VC by ID: ${errorMessage}`);
+
+      return {
+        statusCode: 500,
+        message: `Failed to get VC details: ${errorMessage}`,
+      };
     }
   }
 
@@ -365,12 +442,25 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       // Get the user's DID from local database
       const user = await this.userService.findByToken(token);
       if (!user) {
-        throw new Error('User not found');
+        return {
+          statusCode: 404,
+          message: 'User not found',
+        };
       }
 
       const did = user.did;
       if (!did) {
-        throw new Error('User DID not found');
+        return {
+          statusCode: 400,
+          message: 'User DID not found',
+        };
+      }
+
+      if (!qrData) {
+        return {
+          statusCode: 400,
+          message: 'Unable to upload VC from QR: QR data is empty',
+        };
       }
 
       // Parse the QR data to extract VC
@@ -384,10 +474,18 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         document: 'string',
         vc: parsedVC,
         detailsMeta: 'string',
-        detailsDocumentTitle: typeof parsedVC.credentialSubject === 'object' && parsedVC.credentialSubject && 'name' in parsedVC.credentialSubject ? String((parsedVC.credentialSubject as any).name) : '',
+        detailsDocumentTitle:
+          typeof parsedVC.credentialSubject === 'object' &&
+          parsedVC.credentialSubject &&
+          'name' in parsedVC.credentialSubject
+            ? String(
+                (parsedVC.credentialSubject as Record<string, unknown>).name,
+              )
+            : '',
         detailsUser: 'custom',
         type: 'document',
       });
+
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
@@ -396,37 +494,50 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           headers: this.getAuthHeaders(this.apiKey),
         },
       );
-     
+
       const messageData = messageResponse.data as ApiResponse;
 
       return {
-        status: 'success',
-        vcId: messageData.messageId || 'vc-uploaded',
+        statusCode: 200,
+        message: 'VC uploaded successfully from QR',
+        data: {
+          status: 'success',
+          vcId: messageData.messageId || 'vc-uploaded',
+        },
       };
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-      throw new Error(`Failed to upload VC from QR: ${errorMessage}`);
+      return {
+        statusCode: 500,
+        message: `Failed to upload VC from QR: ${errorMessage}`,
+      };
     }
   }
 
-  private async extractVCFromQR(qrData: string): Promise<Record<string, unknown>> {
+  private async extractVCFromQR(
+    qrData: string,
+  ): Promise<Record<string, unknown>> {
     if (!qrData) {
       throw new Error('QR data is required');
     }
     try {
       const splitqrData = qrData.split('/');
       const issuinceId = splitqrData[splitqrData.length - 1];
+
       const response = await axios.get(
-        `${this.DHIWAY_VC_ISSUER_INSTANCE_URI}/m/${issuinceId}.vc`
+        `${this.DHIWAY_VC_ISSUER_INSTANCE_URI}/m/${issuinceId}.vc`,
       );
-      const vcData = response?.data;
+      const vcData = response?.data as Record<string, unknown>;
       if (!vcData) {
         throw new Error('No verifiable credential data found in response');
       }
       return vcData;
     } catch (error) {
-      throw new Error('Failed to extract verifiable credential from QR: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(
+        'Failed to extract verifiable credential from QR: ' +
+          (error instanceof Error ? error.message : 'Unknown error'),
+      );
     }
   }
 }

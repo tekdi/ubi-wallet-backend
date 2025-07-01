@@ -1,25 +1,50 @@
 export class OnboardedUserResponse {
-  accountId: string;
-  token: string;
+  statusCode: number;
+  message: string;
+  data?: {
+    accountId: string;
+    token: string;
+    did?: string;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      accountId: string;
+      status: string;
+    };
+  };
 }
 
 export class VCListResponse {
-  id: string;
-  name: string;
-  issuer: string;
-  issuedAt: string;
+  statusCode: number;
+  message: string;
+  data?: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    issuedAt: string;
+  }>;
 }
 
 export class VCDetailsResponse {
-  id: string;
-  type: string;
-  issuer: string;
-  credentialSubject: any;
+  statusCode: number;
+  message: string;
+  data?: {
+    id: string;
+    type: string;
+    issuer: string;
+    credentialSubject: any;
+  };
 }
 
 export class UploadResponse {
-  status: string;
-  vcId: string;
+  statusCode: number;
+  message: string;
+  data?: {
+    status: string;
+    vcId: string;
+  };
 }
 
 export class ApiResponse {

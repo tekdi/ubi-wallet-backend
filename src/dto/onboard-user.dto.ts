@@ -10,7 +10,7 @@ export class OnboardUserDto {
   lastName: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   externalUserId: string;
 
   @IsString()

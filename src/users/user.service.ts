@@ -88,4 +88,4 @@ export class UserService {
       { status, updatedBy, updatedAt: new Date() },
     );
   }
-} 
+}

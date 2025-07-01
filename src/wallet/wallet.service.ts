@@ -1,7 +1,9 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   IWalletAdapter,
   IWalletAdapterWithOtp,
+  LoginVerifyResponse,
+  ResendOtpResponse,
 } from '../adapters/interfaces/wallet-adapter.interface';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
@@ -25,22 +27,24 @@ export class WalletService {
     return await this.walletAdapter.login(data);
   }
 
-  async verifyLogin(data: LoginVerifyDto) {
+  async verifyLogin(data: LoginVerifyDto): Promise<LoginVerifyResponse> {
     if (!this.isOtpSupported()) {
-      throw new BadRequestException(
-        'OTP verification not supported by this wallet provider',
-      );
+      return {
+        statusCode: 400,
+        message: 'OTP verification not supported by this wallet provider',
+      };
     }
     return await (this.walletAdapter as IWalletAdapterWithOtp).verifyLogin(
       data,
     );
   }
 
-  async resendOtp(data: ResendOtpDto) {
+  async resendOtp(data: ResendOtpDto): Promise<ResendOtpResponse> {
     if (!this.isOtpSupported()) {
-      throw new BadRequestException(
-        'OTP resend not supported by this wallet provider',
-      );
+      return {
+        statusCode: 400,
+        message: 'OTP resend not supported by this wallet provider',
+      };
     }
     return await (this.walletAdapter as IWalletAdapterWithOtp).resendOtp(data);
   }
