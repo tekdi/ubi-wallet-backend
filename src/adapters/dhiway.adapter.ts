@@ -27,7 +27,6 @@ interface ApiResponse {
   credentials?: Array<{
     id: string;
     type?: string;
-    issuer?: { name?: string };
     issuanceDate?: string;
     credentialSubject?: Record<string, unknown>;
   }>;
@@ -51,7 +50,6 @@ interface Credential {
   createdAt: string;
   updatedAt: string;
   type?: string;
-  issuer?: { name?: string };
   credentialVC?: string | Record<string, unknown>;
 }
 
@@ -285,12 +283,39 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const credentialsData = credentialsResponse.data as Credential[];
 
-      const credentials = credentialsData.map((cred) => ({
-        id: cred.id,
-        name: cred.details?.documentTitle || 'Verifiable Credential',
-        issuer: cred.details?.user || 'Unknown Issuer',
-        issuedAt: cred.createdAt || new Date().toISOString(),
-      }));
+      // Map over the credentials data to extract relevant fields and format them
+      const credentials = credentialsData.map((cred) => {
+        let expiresAt = '';
+        let issuedAt = '';
+
+        // If the credentialVC is a string, try to parse it as JSON to extract dates
+        if (typeof cred.credentialVC === 'string') {
+          try {
+            const parsedVC = JSON.parse(cred.credentialVC);
+            // Check if the parsed object has 'validFrom' and 'validUntil' fields
+            if (parsedVC && typeof parsedVC === 'object' && 'validFrom' in parsedVC) {
+              expiresAt = String((parsedVC as Record<string, unknown>).validUntil ?? '');
+              issuedAt = String((parsedVC as Record<string, unknown>).validFrom ?? '');
+            }
+          } catch {
+            // If parsing fails, leave dates as empty strings
+            expiresAt = '';
+            issuedAt = '';
+          }
+        } else if (cred.credentialVC && typeof cred.credentialVC === 'object' && 'validFrom' in cred.credentialVC) {
+          expiresAt = String((cred.credentialVC as Record<string, unknown>).validUntil ?? '');
+          issuedAt = String((cred.credentialVC as Record<string, unknown>).validFrom ?? '');
+        }
+
+        // Return the formatted credential object
+        return {
+          id: cred.id,
+          name: cred.details?.documentTitle || 'Verifiable Credential',
+          active: cred.active || false,
+          issuedAt,
+          expiresAt,
+        };
+      });
 
       // Filter out credentials where documentTitle is 'OTP'
       const filteredCredentials = credentials.filter(
@@ -378,7 +403,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         data: {
           id: credential.id,
           type: credential.type || 'VerifiableCredential',
-          issuer: credential.issuer?.name || 'Unknown Issuer',
+          json: credential.credentialVC || {},
           credentialSubject:
             (credentialSubject as Record<string, unknown>)?.credentialSubject ||
             {},
@@ -524,7 +549,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     if (!qrData.startsWith('http://') && !qrData.startsWith('https://')) {
       throw new Error('Invalid QR data: Must be a valid URI');
     }
-        
+
     try {
       const splitqrData = qrData.split('/');
       if (splitqrData.length < 2) {
