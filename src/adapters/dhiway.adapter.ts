@@ -283,17 +283,22 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const credentialsData = credentialsResponse.data as Credential[];
 
+      // Map over the credentials data to extract relevant fields and format them
       const credentials = credentialsData.map((cred) => {
         let expiresAt = '';
         let issuedAt = '';
+
+        // If the credentialVC is a string, try to parse it as JSON to extract dates
         if (typeof cred.credentialVC === 'string') {
           try {
             const parsedVC = JSON.parse(cred.credentialVC);
+            // Check if the parsed object has 'validFrom' and 'validUntil' fields
             if (parsedVC && typeof parsedVC === 'object' && 'validFrom' in parsedVC) {
               expiresAt = String((parsedVC as Record<string, unknown>).validUntil ?? '');
               issuedAt = String((parsedVC as Record<string, unknown>).validFrom ?? '');
             }
           } catch {
+            // If parsing fails, leave dates as empty strings
             expiresAt = '';
             issuedAt = '';
           }
@@ -301,6 +306,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           expiresAt = String((cred.credentialVC as Record<string, unknown>).validUntil ?? '');
           issuedAt = String((cred.credentialVC as Record<string, unknown>).validFrom ?? '');
         }
+
+        // Return the formatted credential object
         return {
           id: cred.id,
           name: cred.details?.documentTitle || 'Verifiable Credential',
