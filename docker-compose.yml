@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  wallet-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ubi-wallet-backend
+    ports:
+      - "3018:3018"
+    environment:
+      - NODE_ENV=production
+      - PORT=3018
+      - WALLET_PROVIDER=dhiway
+      - DHIWAY_API_BASE=${DHIWAY_API_BASE}
+      - DHIWAY_API_KEY=${DHIWAY_API_KEY}
+      - DHIWAY_VC_ISSUER_INSTANCE_URI=${DHIWAY_VC_ISSUER_INSTANCE_URI}
+      - BENEFICIARY_BACKEND_URI=${BENEFICIARY_BACKEND_URI}
+      # Database Configuration
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+    env_file:
+      - .env
