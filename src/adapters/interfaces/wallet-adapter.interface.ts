@@ -70,7 +70,6 @@ export interface VCListResponse {
   data?: Array<{
     id: string;
     name: string;
-    issuer: string;
     issuedAt: string;
   }>;
 }
@@ -81,7 +80,7 @@ export interface VCDetailsResponse {
   data?: {
     id: string;
     type: string;
-    issuer: string;
+    json: any;
     credentialSubject: any;
   };
 }
