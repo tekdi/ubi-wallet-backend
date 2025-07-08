@@ -56,14 +56,11 @@ interface Credential {
 @Injectable()
 export class DhiwayAdapter implements IWalletAdapterWithOtp {
   private readonly dhiwayBaseUrl: string;
-  private readonly DHIWAY_VC_ISSUER_INSTANCE_URI: string;
   private readonly apiKey: string;
 
   constructor(private readonly userService: UserService) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
-    this.DHIWAY_VC_ISSUER_INSTANCE_URI =
-      process.env.DHIWAY_VC_ISSUER_INSTANCE_URI || '';
   }
 
   private getHeaders() {
@@ -551,18 +548,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     }
 
     try {
-      const splitqrData = qrData.split('/');
-      if (splitqrData.length < 2) {
-        throw new Error('Invalid QR data format');
-      }
-      const issuinceId = splitqrData[splitqrData.length - 1];
-      if (!issuinceId) {
-        throw new Error('Invalid QR data: Missing credential ID');
-      }
-      const response = await axios.get(
-        `${this.DHIWAY_VC_ISSUER_INSTANCE_URI}/m/${issuinceId}.vc`,
-        { timeout: 10000 }
-      );
+      const response = await axios.get(`${qrData}.vc`, { timeout: 10000 });
       const vcData = response?.data as Record<string, unknown>;
       if (!vcData) {
         throw new Error('No verifiable credential data found in response');
