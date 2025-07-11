@@ -80,6 +80,7 @@ export interface VCDetailsResponse {
   data?: {
     id: string;
     type: string;
+    name: string;
     json: any;
     credentialSubject: any;
   };

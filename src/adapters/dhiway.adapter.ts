@@ -399,7 +399,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         message: `Successfully fetched the VC with ID: ${vcId}`,
         data: {
           id: credential.id,
-          type: credential.type || 'VerifiableCredential',
+          name: credential.details?.documentTitle || 'Verifiable Credential',
+          type: credential.type || 'Verifiable Credential',
           json: credential.credentialVC || {},
           credentialSubject:
             (credentialSubject as Record<string, unknown>)?.credentialSubject ||
