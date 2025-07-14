@@ -284,11 +284,14 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const credentials = credentialsData.map((cred) => {
         let expiresAt = '';
         let issuedAt = '';
+        let vcName = '';
 
         // If the credentialVC is a string, try to parse it as JSON to extract dates
         if (typeof cred.credentialVC === 'string') {
           try {
             const parsedVC = JSON.parse(cred.credentialVC);
+            vcName = (parsedVC?.credentialSchema?.title?.split(':')[0]) || 'Verifiable Credential';
+
             // Check if the parsed object has 'validFrom' and 'validUntil' fields
             if (parsedVC && typeof parsedVC === 'object' && 'validFrom' in parsedVC) {
               expiresAt = String((parsedVC as Record<string, unknown>).validUntil ?? '');
@@ -307,7 +310,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         // Return the formatted credential object
         return {
           id: cred.id,
-          name: cred.details?.documentTitle || 'Verifiable Credential',
+          name: vcName || 'Verifiable Credential',
           active: cred.active || false,
           issuedAt,
           expiresAt,
@@ -508,6 +511,37 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         detailsUser: 'custom',
         type: 'document',
       });
+      // Check if VC already exists in wallet
+      const credentialsResponse = await axios.get(
+        `${this.dhiwayBaseUrl}/api/v1/cred`,
+        {
+          headers: this.getAuthHeaders(token),
+        },
+      );
+
+      const credentialsData = credentialsResponse.data as Credential[];
+
+      // Check if a credential with same ID already exists
+      const existingCredential = credentialsData.find((cred) => {
+        if (typeof cred.credentialVC === 'string') {
+          try {
+            const parsedCred = JSON.parse(cred.credentialVC);
+            return parsedCred.id === parsedVC.id;
+          } catch {
+            return false;
+          }
+        } else if (cred.credentialVC && typeof cred.credentialVC === 'object') {
+          return cred.credentialVC.id === parsedVC.id;
+        }
+        return false;
+      });
+
+      if (existingCredential) {
+        return {
+          statusCode: 500,
+          message: 'This verifiable credential is already added to your wallet',
+        };
+      }
 
       // Create a message with the VC
       const messageResponse = await axios.post(
