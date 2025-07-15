@@ -1,0 +1,58 @@
+---
+description: USE WHEN designing system architecture, implementing design patterns, organizing code structure, or discussing architectural decisions
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Folder Strucuture
+
+ubi-wallet-backend/
+├── 📁 src/                          # Main source code directory
+│   ├── 📁 adapters/                 # External service adapters (If any new wallet provider is to be added it will go inside this folder)
+│   │   ├── �� adapter.factory.ts    # Factory for creating wallet adapters (Factor class to initialize respective adapter class)
+│   │   ├── 📄 dhiway.adapter.ts     # Dhiway wallet service implementation (Adapter for wallet service provider, the adapters should impliment IWalletAdapterWithOtp or IWalletAdapter interface from wallet-adapter.interface.ts)
+│   │   └── 📁 interfaces/           # Adapter interface definitions
+│   │       └── 📄 wallet-adapter.interface.ts  # Wallet adapter contracts
+│   │
+│   ├── 📁 dto/                      # Data Transfer Objects
+│   │   ├── 📄 common.dto.ts         # Common response DTOs
+│   │   ├── 📄 login.dto.ts          # Login-related DTOs
+│   │   ├── 📄 onboard-user.dto.ts   # User onboarding DTOs
+│   │   └── 📄 upload-vc.dto.ts      # VC upload DTOs
+│   │
+│   ├── 📁 users/                    # User management module
+│   │   ├── 📄 user.entity.ts        # User database entity
+│   │   ├── 📄 user.module.ts        # User module configuration
+│   │   └── 📄 user.service.ts       # User business logic
+│   │
+│   ├── 📁 wallet/                   # Wallet functionality module
+│   │   ├── 📄 wallet.controller.ts  # Wallet API endpoints
+│   │   ├── 📄 wallet.module.ts      # Wallet module configuration
+│   │   ├── 📄 wallet.service.ts     # Wallet business logic
+│   │   └── 📄 wallet.service.spec.ts # Wallet service tests
+│   │
+│   ├── 📄 app.controller.ts         # Main application controller
+│   ├── 📄 app.controller.spec.ts    # App controller tests
+│   ├── 📄 app.module.ts             # Root application module
+│   ├── 📄 app.service.ts            # Main application service
+│   └── 📄 main.ts                   # Application entry point
+│
+├── 📁 test/                         # End-to-end tests
+│   ├── 📄 app.e2e-spec.ts           # E2E test specifications
+│   └── 📄 jest-e2e.json             # E2E test configuration
+│
+├── 📄 .dockerignore                 # Docker build exclusions
+├── 📄 .env.example                  # Environment variables template
+├── �� docker-compose.yml            # Docker Compose configuration
+├── 📄 Dockerfile                    # Docker image definition
+├── 📄 env_sample                    # Sample environment file
+├── 📄 eslint.config.mjs             # ESLint configuration
+├── 📄 init.sql                      # Database initialization script
+├── 📄 nest-cli.json                 # NestJS CLI configuration
+├── 📄 package-lock.json             # NPM lock file
+├── 📄 package.json                  # Project dependencies and scripts
+├── 📄 README.md                     # Project documentation
+├── 📄 tsconfig.build.json           # TypeScript build configuration
+├── 📄 tsconfig.json                 # TypeScript configuration
+└── 📄 wallet-mw.postman_collection.json  # Postman API collection
+

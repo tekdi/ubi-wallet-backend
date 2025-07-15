@@ -1,0 +1,15 @@
+# Database Schema Rules
+
+## users table (public.users)
+- Primary key: `id` (UUID, auto-generated)
+- Contains personal info: `first_name`, `last_name`, `phone`, `email`
+- Account linking: `account_id` (unique)
+- Authentication fields: `username` (unique), `password`, `token`
+- Optional identity fields: `did`
+- Status: `status` (enum: users_status_enum, default: active), `blocked` (boolean)
+- Audit fields: `created_by`, `updated_by`, `created_at`, `updated_at`
+- Unique indexes on `account_id` and `username`
+
+Use `created_at` and `updated_at` timestamps for record tracking.
+
+Use `account_id` as a foreign key for linking to other tables where applicable.
