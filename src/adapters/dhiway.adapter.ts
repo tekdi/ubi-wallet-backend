@@ -290,15 +290,11 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         if (typeof cred.credentialVC === 'string') {
           try {
             const parsedVC = JSON.parse(cred.credentialVC);
-<<<<<<< HEAD
 
             vcName =
               (typeof parsedVC?.credentialSchema?.title === 'string'
                 ? parsedVC.credentialSchema.title.split(':')[0]
                 : '') || 'Verifiable Credential';
-=======
-            vcName = (parsedVC?.credentialSchema?.title?.split(':')[0]) || 'Verifiable Credential';
->>>>>>> 158eccd80790255d92880306b3b0dab111e85bbe
 
             // Check if the parsed object has 'validFrom' and 'validUntil' fields
             if (parsedVC && typeof parsedVC === 'object' && 'validFrom' in parsedVC) {
@@ -546,11 +542,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       if (existingCredential) {
         return {
-<<<<<<< HEAD
           statusCode: 409,
-=======
-          statusCode: 500,
->>>>>>> 158eccd80790255d92880306b3b0dab111e85bbe
           message: 'This verifiable credential is already added to your wallet',
         };
       }
