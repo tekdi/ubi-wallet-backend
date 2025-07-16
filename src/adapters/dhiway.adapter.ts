@@ -332,7 +332,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       );
 
       // Sort credentials by issuedAt in descending order (newest first)
-      const sortedCredentials = filteredCredentials.sort((a, b) => {
+      const sortedCredentials = [...filteredCredentials].sort((a, b) => {
         const dateA = a.issuedAt ? new Date(a.issuedAt).getTime() : 0;
         const dateB = b.issuedAt ? new Date(b.issuedAt).getTime() : 0;
         return dateB - dateA; // Descending order (newest first)
