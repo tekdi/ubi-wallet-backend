@@ -285,6 +285,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         let expiresAt = '';
         let issuedAt = '';
         let vcName = '';
+        let documentTitle = '';
 
         // If the credentialVC is a string, try to parse it as JSON to extract dates
         if (typeof cred.credentialVC === 'string') {
@@ -311,6 +312,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           issuedAt = String((cred.credentialVC as Record<string, unknown>).validFrom ?? '');
         }
 
+        // Get the document title from the credential details
+        documentTitle = cred.details?.documentTitle || '';
+
         // Return the formatted credential object
         return {
           id: cred.id,
@@ -318,12 +322,13 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           active: cred.active || false,
           issuedAt,
           expiresAt,
+          documentTitle,
         };
       });
 
       // Filter out credentials where documentTitle is 'OTP'
       const filteredCredentials = credentials.filter(
-        (cred) => cred.name !== 'otp',
+        (cred) => cred.documentTitle !== 'otp',
       );
 
       return {

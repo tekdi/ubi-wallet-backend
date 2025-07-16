@@ -70,7 +70,9 @@ export interface VCListResponse {
   data?: Array<{
     id: string;
     name: string;
+    documentTitle: string;
     issuedAt: string;
+    expiresAt: string;
   }>;
 }
 
