@@ -44,6 +44,7 @@ export class User {
   @Column({ length: 20, nullable: true })
   phone: string;
 
+  @Index({ unique: true })
   @Column({ length: 255, nullable: true })
   email: string;
 

@@ -15,6 +15,7 @@ import {
   UploadResponse,
 } from './interfaces/wallet-adapter.interface';
 import { UserService } from '../users/user.service';
+import { LoggerService } from '../common/logger/logger.service';
 
 interface ApiResponse {
   accountId?: string;
@@ -27,6 +28,7 @@ interface ApiResponse {
   credentials?: Array<{
     id: string;
     type?: string;
+    issuer?: { name?: string };
     issuanceDate?: string;
     credentialSubject?: Record<string, unknown>;
   }>;
@@ -58,7 +60,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   private readonly dhiwayBaseUrl: string;
   private readonly apiKey: string;
 
-  constructor(private readonly userService: UserService) {
+  constructor(
+    private readonly userService: UserService,
+    private readonly logger: LoggerService,
+  ) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
   }
@@ -79,6 +84,28 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
   async onboardUser(data: OnboardUserDto): Promise<OnboardedUserResponse> {
     try {
+      // Check if username already exists
+      const usernameExists = await this.userService.checkUsernameExists(
+        data.username,
+      );
+      if (usernameExists) {
+        return {
+          statusCode: 409,
+          message: 'Username already exists',
+        };
+      }
+
+      // Check if email already exists (if email is provided)
+      if (data.email) {
+        const emailExists = await this.userService.checkEmailExists(data.email);
+        if (emailExists) {
+          return {
+            statusCode: 409,
+            message: 'Email already registered',
+          };
+        }
+      }
+
       // First, create user in Dhiway wallet service
       const externalUserId = data.externalUserId || data.username;
       const response = await axios.post(
@@ -128,11 +155,32 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       };
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      // Handle specific database constraint errors
+      if (error instanceof Error) {
+        if (error.message === 'Username already exists') {
+          return {
+            statusCode: 409,
+            message: 'Username already exists',
+          };
+        }
+        if (error.message === 'Email already registered') {
+          return {
+            statusCode: 409,
+            message: 'Email already registered',
+          };
+        }
+        if (error.message === 'Account ID already exists') {
+          return {
+            statusCode: 409,
+            message: 'Account ID already exists',
+          };
+        }
+      }
+
+      this.logger.logError('Failed to onboard user', error, 'onboardUser');
       return {
         statusCode: 500,
-        message: `Failed to onboard user: ${errorMessage}`,
+        message: 'Failed to onboard user',
       };
     }
   }
@@ -202,11 +250,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       };
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.logError('Failed to login', error, 'login');
       return {
         statusCode: 500,
-        message: `Failed to login: ${errorMessage}`,
+        message: 'Failed to login',
       };
     }
   }
@@ -233,11 +280,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       };
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.logError('Failed to verify login', error, 'verifyLogin');
       return {
         statusCode: 500,
-        message: `Failed to verify login: ${errorMessage}`,
+        message: 'Failed to verify login',
       };
     }
   }
@@ -259,11 +305,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         message: responseData.message || 'OTP resent successfully',
       };
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.logError('Failed to resend OTP', error, 'resendOtp');
       return {
         statusCode: 500,
-        message: `Failed to resend OTP: ${errorMessage}`,
+        message: 'Failed to resend OTP',
       };
     }
   }
@@ -344,11 +389,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         data: sortedCredentials,
       };
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.logError('Failed to get VCs', error, 'getAllVCs');
       return {
         statusCode: 500,
-        message: `Failed to get VCs: ${errorMessage}`,
+        message: 'Failed to get VCs',
       };
     }
   }
@@ -373,7 +417,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       if (!credential) {
         return {
           statusCode: 404,
-          message: `Credential not found with ID: ${vcId}`,
+          message: 'Credential not found',
         };
       }
 
@@ -415,7 +459,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       return {
         statusCode: 200,
-        message: `Successfully fetched the VC with ID: ${vcId}`,
+        message: 'Successfully fetched the VC',
         data: {
           id: credential.id,
           name: credential.details?.documentTitle || 'Verifiable Credential',
@@ -429,10 +473,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
-
+      this.logger.error(errorMessage);
       return {
         statusCode: 500,
-        message: `Failed to get VC details: ${errorMessage}`,
+        message: 'Failed to get VC details',
       };
     }
   }
@@ -581,9 +625,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     } catch (error: unknown) {
       const errorMessage =
         (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.error(errorMessage);
       return {
         statusCode: 500,
-        message: `Failed to upload VC from QR: ${errorMessage}`,
+        message: 'Failed to upload VC from QR',
       };
     }
   }

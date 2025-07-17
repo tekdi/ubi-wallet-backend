@@ -23,16 +23,34 @@ export class UserService {
     email?: string;
     createdBy?: string;
   }): Promise<User> {
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    try {
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    const user = this.userRepository.create({
-      ...userData,
-      password: hashedPassword,
-      status: UserStatus.ACTIVE,
-      blocked: false,
-    });
+      const user = this.userRepository.create({
+        ...userData,
+        password: hashedPassword,
+        status: UserStatus.ACTIVE,
+        blocked: false,
+      });
 
-    return await this.userRepository.save(user);
+      return await this.userRepository.save(user);
+    } catch (error: unknown) {
+      // Handle database constraint violations
+      const dbError = error as { code?: string; detail?: string };
+      if (dbError.code === '23505') {
+        // PostgreSQL unique constraint violation
+        if (dbError.detail?.includes('username')) {
+          throw new Error('Username already exists');
+        }
+        if (dbError.detail?.includes('email')) {
+          throw new Error('Email already registered');
+        }
+        if (dbError.detail?.includes('account_id')) {
+          throw new Error('Account ID already exists');
+        }
+      }
+      throw error;
+    }
   }
 
   async findByUsername(username: string): Promise<User | null> {
@@ -87,5 +105,26 @@ export class UserService {
       { accountId },
       { status, updatedBy, updatedAt: new Date() },
     );
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { email, status: UserStatus.ACTIVE, blocked: false },
+    });
+  }
+
+  async checkUsernameExists(username: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({
+      where: { username },
+    });
+    return !!user;
+  }
+
+  async checkEmailExists(email: string): Promise<boolean> {
+    if (!email) return false;
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+    return !!user;
   }
 }
