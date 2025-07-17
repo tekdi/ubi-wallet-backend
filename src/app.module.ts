@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { WalletModule } from './wallet/wallet.module';
 import { User } from './users/user.entity';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { User } from './users/user.entity';
       synchronize: process.env.NODE_ENV !== 'production', // Auto-create tables in development
       logging: process.env.NODE_ENV !== 'production',
     }),
+    LoggerModule,
     WalletModule,
   ],
   controllers: [AppController],
