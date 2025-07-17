@@ -157,24 +157,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     } catch (error: unknown) {
       // Handle specific database constraint errors
       if (error instanceof Error) {
-        if (error.message === 'Username already exists') {
-          return {
-            statusCode: 409,
-            message: 'Username already exists',
-          };
-        }
-        if (error.message === 'Email already registered') {
-          return {
-            statusCode: 409,
-            message: 'Email already registered',
-          };
-        }
-        if (error.message === 'Account ID already exists') {
-          return {
-            statusCode: 409,
-            message: 'Account ID already exists',
-          };
-        }
+        return {
+          statusCode: 409,
+          message: error.message || 'Failed to onboard user',
+        };
       }
 
       this.logger.logError('Failed to onboard user', error, 'onboardUser');
