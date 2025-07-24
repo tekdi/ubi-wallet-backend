@@ -13,3 +13,7 @@ DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
 DB_DATABASE=wallet_db
+
+# Environment
+NODE_ENV=development
+ALLOWED_ORIGINS=http://localhost:0987,http://localhost:0000
