@@ -194,33 +194,110 @@ Authorization: Bearer <user_token>
 
 **POST** `/api/wallet/{user_id}/vcs/upload-qr`
 
-Uploads a verifiable credential from QR code data.
+Uploads a Verifiable Credential from QR code data to the user's wallet.
 
 **Path Parameters:**
 - `user_id`: The user's account ID
 
-**Request Body:**
-```json
-{
-  "qrData": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
 **Headers:**
 ```
 Authorization: Bearer <user_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "qrData": "https://example.com/vc/123"
+}
 ```
 
 **Response:**
 ```json
 {
-  "status": "success",
-  "vcId": "vc_uploaded_123"
+  "statusCode": 200,
+  "message": "VC uploaded successfully from QR",
+  "data": {
+    "status": "success",
+    "vcId": "vc-uploaded"
+  }
+}
+```
+
+**Note:** After successfully uploading a VC, a watcher is automatically added to monitor changes to the credential.
+
+---
+
+### 8. Register VC Watch
+
+**POST** `/api/wallet/vcs/watch`
+
+Registers a watcher for a specific Verifiable Credential.
+
+**Request Body:**
+```json
+{
+  "vcPublicId": "string",
+  "email": "string (optional)",
+  "callbackUrl": "string (optional)"
+}
+```
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "message": "VC watch registered successfully",
+  "data": {
+    "watchId": "watch-registered",
+    "status": "success"
+  }
 }
 ```
 
 **Validation:**
-- `qrData`: Required string
+- `vcPublicId`: Required string
+- `email`: Optional valid email format
+- `callbackUrl`: Optional string
+
+**Error Responses:**
+- `400`: Watch functionality not supported by wallet provider
+- `401`: Invalid authorization
+- `404`: User not found
+- `500`: Failed to register VC watch
+
+---
+
+### 9. Watch Callback
+
+**POST** `/api/wallet/vcs/watch/callback`
+
+Receives notifications when watched VCs are updated.
+
+**Request Body:**
+```json
+{
+  "identifier": "string",
+  "recordPublicId": "string",
+  "messageId": "string",
+  "data": {},
+  "timestamp": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "statusCode": 200,
+  "message": "Watch callback processed successfully",
+  "data": {
+    "processed": true,
+    "timestamp": "2024-01-01T00:00:00.000Z",
+    "user_id": "user123",
+    "recordPublicId": "vc123"
+  }
+}
+```
 
 ---
 
@@ -266,6 +343,15 @@ The service requires the following environment variables:
 DHIWAY_API_BASE=https://api.dhiway.com
 DHIWAY_API_KEY=your_api_key_here
 
+# Dhiway VC Issuer Instance URI for watch API
+DHIWAY_VC_ISSUER_INSTANCE_URI=https://your-dhiway-instance.com
+
+# Default email for watch notifications
+DHIWAY_WATCHER_EMAIL=watcher@example.com
+
+# Wallet service base URL for callback endpoints
+WALLET_SERVICE_BASE_URL=http://localhost:3018
+
 # Wallet Provider (optional, defaults to 'dhiway')
 WALLET_PROVIDER=dhiway
 ```
@@ -296,6 +382,17 @@ curl -X GET http://localhost:3000/api/wallet/user_123/vcs \
   -H "Authorization: Bearer user_token_123456"
 ```
 
+4. **Register VC Watch:**
+```bash
+curl -X POST http://localhost:3000/api/wallet/user_123/vcs/watch \
+  -H "Authorization: Bearer user_token_123456" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vcPublicId": "vc-12345",
+    "email": "user@example.com"
+  }'
+```
+
 ### User Onboarding
 
 ```bash
@@ -319,64 +416,11 @@ curl -X POST http://localhost:3000/api/wallet/onboard \
   - OTP login and verification
   - OTP resend functionality
   - VC management
+  - VC watch functionality
 
 ### Adding New Providers
 
 To add a new wallet provider:
 
 1. Create a new adapter class implementing `IWalletAdapter` or `IWalletAdapterWithOtp`
-2. Add the provider to the `adapter.factory.ts`
-3. Update the environment configuration
-
----
-
-## Rate Limiting
-
-Currently, no rate limiting is implemented. Consider implementing rate limiting for production use.
-
----
-
-## Security Considerations
-
-1. **Token Storage**: Store tokens securely and implement proper token expiration
-2. **Input Validation**: All inputs are validated using class-validator decorators
-3. **Error Handling**: Sensitive information is not exposed in error messages
-4. **HTTPS**: Use HTTPS in production environments
-
----
-
-## Testing
-
-Run the test suite:
-
-```bash
-npm test
-```
-
-Run tests with coverage:
-
-```bash
-npm run test:cov
-```
-
----
-
-## Development
-
-Start the development server:
-
-```bash
-npm run start:dev
-```
-
-Build the application:
-
-```bash
-npm run build
-```
-
-Start the production server:
-
-```bash
-npm run start:prod
-``` 
+2. Add the provider to the wallet
