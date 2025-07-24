@@ -416,11 +416,11 @@ curl -X POST http://localhost:3000/api/wallet/onboard \
   - OTP login and verification
   - OTP resend functionality
   - VC management
-  - VC watch functionality (optional)
+  - VC watch functionality
 
 ### Adding New Providers
 
 To add a new wallet provider:
 
 1. Create a new adapter class implementing `IWalletAdapter` or `IWalletAdapterWithOtp`
-2. Add the provider to the `
+2. Add the provider to the wallet
