@@ -13,6 +13,8 @@ import {
   VCListResponse,
   VCDetailsResponse,
   UploadResponse,
+  WatchVcDto,
+  WatchVcResponse,
 } from './interfaces/wallet-adapter.interface';
 import { UserService } from '../users/user.service';
 import { LoggerService } from '../common/logger/logger.service';
@@ -600,6 +602,33 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const messageData = messageResponse.data as ApiResponse;
 
+      // Extract the VC ID from the QR data URL
+      const vcPublicId = qrData.split('/').pop();
+      if (!vcPublicId) {
+        throw new Error('Could not extract VC ID from QR data URL');
+      }
+
+      // Automatically add a watcher for the uploaded VC
+      try {
+        const watchData: WatchVcDto = {
+          vcPublicId: vcPublicId,
+        };
+
+        await this.watchVC(watchData, token);
+        this.logger.log(
+          'Watcher automatically added for uploaded VC',
+          'uploadVCFromQR',
+        );
+      } catch (watchError) {
+        // Log the error but don't fail the upload
+        this.logger.error(
+          'Failed to add watcher for uploaded VC: ' +
+            (watchError instanceof Error
+              ? watchError.message
+              : 'Unknown error'),
+        );
+      }
+
       return {
         statusCode: 200,
         message: 'VC uploaded successfully from QR',
@@ -641,6 +670,99 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         'Failed to extract verifiable credential from QR: ' +
           (error instanceof Error ? error.message : 'Unknown error'),
       );
+    }
+  }
+
+  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
+    try {
+      // Get the user's DID from local database using token
+      const user = await this.userService.findByToken(token);
+      if (!user) {
+        return {
+          statusCode: 404,
+          message: 'User not found',
+        };
+      }
+
+      const did = user.did;
+      if (!did) {
+        return {
+          statusCode: 400,
+          message: 'User DID not found',
+        };
+      }
+
+      data.email = process.env.DHIWAY_WATCHER_EMAIL;
+      data.callbackUrl = `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`;
+
+      // Get VC data using publicId
+      try {
+        const vcResponse = await axios.get(
+          `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${data.vcPublicId}.json`,
+          { timeout: 10000 },
+        );
+
+        const vcData = vcResponse?.data as Record<string, unknown>;
+        if (!vcData) {
+          return {
+            statusCode: 404,
+            message: 'No verifiable credential data found',
+          };
+        }
+
+        // Update vcPublicId from response if needed
+        if (vcData.publicId) {
+          data.vcPublicId = vcData.publicId as string;
+        }
+
+        // Update identifier from response if needed
+        if (vcData.identifier) {
+          data.identifier = vcData.identifier as string;
+        }
+      } catch (error) {
+        this.logger.error(
+          'Failed to fetch VC data: ' +
+            (error instanceof Error ? error.message : 'Unknown error'),
+        );
+        return {
+          statusCode: 500,
+          message: 'Failed to fetch verifiable credential data',
+        };
+      }
+
+      // Prepare the watch payload for Dhiway API
+      const watchPayload = {
+        identifier: data.identifier,
+        recordPublicId: data.vcPublicId,
+        email: data.email,
+        callbackUrl: data.callbackUrl,
+      };
+
+      // Call Dhiway watch API
+      const response = await axios.post(
+        `${process.env.DHIWAY_VC_ISSUER_INSTANCE_URI}/api/watch`,
+        watchPayload,
+        { headers: this.getHeaders() },
+      );
+
+      const responseData = response.data as ApiResponse;
+
+      return {
+        statusCode: 200,
+        message: 'VC watch registered successfully',
+        data: {
+          watchId: responseData.messageId || 'watch-registered',
+          status: 'success',
+        },
+      };
+    } catch (error: unknown) {
+      const errorMessage =
+        (error as ErrorWithMessage).message || 'Unknown error';
+      this.logger.error(errorMessage);
+      return {
+        statusCode: 500,
+        message: 'Failed to register VC watch',
+      };
     }
   }
 }

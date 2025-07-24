@@ -63,7 +63,17 @@ PORT=3018
 WALLET_PROVIDER=dhiway
 DHIWAY_API_BASE=https://wallet-api.depwd.onest.dhiway.net
 DHIWAY_API_KEY=your-dhiway-api-key
-BENEFICIARY_BACKEND_URI=https://beneficiary-backend.example.com
+DHIWAY_VC_ISSUER_INSTANCE_URI=dhiway-vc-issuer-instance-uri
+DHIWAY_WATCHER_EMAIL=watcher@example.com
+WALLET_SERVICE_BASE_URL=http://localhost:3018
+DHIWAY_VC_ISSUER_GET_VC_BASE_URI=dhiway-getvc-base-uri
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=password
+DB_DATABASE=wallet_db
 
 # Database Configuration
 DB_HOST=localhost
@@ -275,7 +285,7 @@ npm run build
 | WALLET_PROVIDER | Wallet provider | dhiway |
 | DHIWAY_API_BASE | Dhiway API base URL | - |
 | DHIWAY_API_KEY | Dhiway API key | - |
-| BENEFICIARY_BACKEND_URI | Beneficiary backend URL | - |
+| DHIWAY_VC_ISSUER_GET_VC_BASE_URI | Base URL to get .vc data from vc public id | - |
 | DB_HOST | Database host | localhost |
 | DB_PORT | Database port | 5432 |
 | DB_USERNAME | Database username | postgres |

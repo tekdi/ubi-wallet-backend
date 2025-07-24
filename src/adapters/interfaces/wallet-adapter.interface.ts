@@ -97,6 +97,22 @@ export interface UploadResponse {
   };
 }
 
+export interface WatchVcDto {
+  vcPublicId: string;
+  identifier?: string;
+  email?: string;
+  callbackUrl?: string;
+}
+
+export interface WatchVcResponse {
+  statusCode: number;
+  message: string;
+  data?: {
+    watchId?: string;
+    status: string;
+  };
+}
+
 export interface IWalletAdapter {
   onboardUser(data: OnboardUserDto): Promise<OnboardedUserResponse>;
   login(data: LoginRequestDto): Promise<LoginResponse>;
@@ -111,6 +127,7 @@ export interface IWalletAdapter {
     qrData: string,
     token: string,
   ): Promise<UploadResponse>;
+  watchVC?(data: WatchVcDto, token: string): Promise<WatchVcResponse>;
 }
 
 export interface IWalletAdapterWithOtp extends IWalletAdapter {

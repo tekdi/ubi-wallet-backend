@@ -4,9 +4,12 @@ import {
   IWalletAdapterWithOtp,
   LoginVerifyResponse,
   ResendOtpResponse,
+  WatchVcDto,
+  WatchVcResponse,
 } from '../adapters/interfaces/wallet-adapter.interface';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
+import { WatchCallbackDto } from '../dto/watch-callback.dto';
 import {
   LoginRequestDto,
   LoginVerifyDto,
@@ -65,5 +68,43 @@ export class WalletService {
 
   async uploadVCFromQR(user_id: string, data: UploadVcDto, token: string) {
     return await this.walletAdapter.uploadVCFromQR(user_id, data.qrData, token);
+  }
+
+  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
+    if (!this.isWatchSupported()) {
+      return {
+        statusCode: 400,
+        message: 'Watch functionality not supported by this wallet provider',
+      };
+    }
+    return await this.walletAdapter.watchVC!(data, token);
+  }
+
+  private isWatchSupported(): boolean {
+    return (
+      'watchVC' in this.walletAdapter &&
+      typeof this.walletAdapter.watchVC === 'function'
+    );
+  }
+
+  processWatchCallback(data: WatchCallbackDto) {
+    // Process watch callback notification
+    // This method can be extended to implement custom logic
+    // such as sending notifications to users, updating local cache, etc.
+
+    console.log('Processing watch callback:', data);
+
+    // Example: You could implement notification logic here
+    // await this.notificationService.sendNotification(data);
+
+    return {
+      statusCode: 200,
+      message: 'Watch callback processed successfully',
+      data: {
+        processed: true,
+        timestamp: new Date().toISOString(),
+        recordPublicId: data.recordPublicId,
+      },
+    };
   }
 }

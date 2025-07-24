@@ -2,7 +2,10 @@ PORT=3018
 WALLET_PROVIDER=dhiway
 DHIWAY_API_BASE=dhiway-api-base
 DHIWAY_API_KEY=dhiway-api-key
-BENEFICIARY_BACKEND_URI=beneficiary-backend-uri
+DHIWAY_VC_ISSUER_INSTANCE_URI=dhiway-vc-issuer-instance-uri
+DHIWAY_WATCHER_EMAIL=watcher@example.com
+WALLET_SERVICE_BASE_URL=http://localhost:3018
+DHIWAY_VC_ISSUER_GET_VC_BASE_URI=dhiway-getvc-base-uri
 
 # Database Configuration
 DB_HOST=localhost
@@ -10,8 +13,3 @@ DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
 DB_DATABASE=wallet_db
-
-# Environment
-NODE_ENV=development
-
-ALLOWED_ORIGINS=http://localhost:0987,http://localhost:0000

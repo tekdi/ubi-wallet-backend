@@ -12,6 +12,8 @@ import {
 import { WalletService } from './wallet.service';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
+import { WatchVcDto } from '../dto/watch-vc.dto';
+import { WatchCallbackDto } from '../dto/watch-callback.dto';
 import {
   LoginRequestDto,
   LoginVerifyDto,
@@ -71,6 +73,22 @@ export class WalletController {
   ) {
     const token = this.extractToken(authorization);
     return await this.walletService.uploadVCFromQR(user_id, data, token);
+  }
+
+  @Post('vcs/watch')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async watchVC(
+    @Body() data: WatchVcDto,
+    @Headers('authorization') authorization: string,
+  ) {
+    const token = this.extractToken(authorization);
+    return await this.walletService.watchVC(data, token);
+  }
+
+  @Post('vcs/watch/callback')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  watchCallback(@Body() data: WatchCallbackDto) {
+    return this.walletService.processWatchCallback(data);
   }
 
   private extractToken(authorization: string): string {
