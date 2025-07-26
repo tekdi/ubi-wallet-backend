@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import axios from 'axios';
 import {
   IWalletAdapter,
   IWalletAdapterWithOtp,
@@ -344,27 +345,184 @@ export class WalletService {
     );
   }
 
-  processWatchCallback(data: WatchCallbackDto) {
-    // Process watch callback notification
-    // This method can be extended to implement custom logic
-    // such as sending notifications to users, updating local cache, etc.
+  async processWatchCallback(data: WatchCallbackDto) {
+    try {
+      this.logger.log(
+        `Processing watch callback for recordPublicId: ${data.recordPublicId}`,
+        'WalletService.processWatchCallback',
+      );
 
-    this.logger.log(
-      'Processing watch callback',
-      'WalletService.processWatchCallback',
-    );
+      // Get records from wallet_vcs table where vc_public_id matches recordPublicId
+      if (!data.recordPublicId) {
+        return {
+          statusCode: 400,
+          message: 'recordPublicId is required',
+          data: {
+            processed: false,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      }
 
-    // Example: You could implement notification logic here
-    // await this.notificationService.sendNotification(data);
+      const walletVCs = await this.walletVCService.getVCsByPublicId(
+        data.recordPublicId,
+      );
 
-    return {
-      statusCode: 200,
-      message: 'Watch callback processed successfully',
-      data: {
-        processed: true,
-        timestamp: new Date().toISOString(),
-        recordPublicId: data.recordPublicId,
-      },
-    };
+      if (!walletVCs || walletVCs.length === 0) {
+        this.logger.log(
+          `No wallet VC records found for recordPublicId: ${data.recordPublicId}`,
+          'WalletService.processWatchCallback',
+        );
+        return {
+          statusCode: 404,
+          message: 'No wallet VC records found for the given recordPublicId',
+          data: {
+            processed: false,
+            timestamp: new Date().toISOString(),
+            recordPublicId: data.recordPublicId,
+          },
+        };
+      }
+
+      // Get the wallet backend service URL for comparison
+      const walletBackendUrl = process.env.WALLET_SERVICE_BASE_URL || '';
+      let forwardedCallbacks = 0;
+      let failedCallbacks = 0;
+
+      // Process each wallet VC record
+      for (const walletVC of walletVCs) {
+        if (
+          walletVC.watcherCallbackUrl &&
+          walletVC.watcherCallbackUrl.trim() !== ''
+        ) {
+          // Check if the callback URL is not the wallet backend service URL
+          if (
+            !walletBackendUrl ||
+            !walletVC.watcherCallbackUrl.includes(walletBackendUrl)
+          ) {
+            try {
+              // Forward the callback data to the external URL
+              const response = await this.forwardCallbackToExternalUrl(
+                walletVC.watcherCallbackUrl,
+                data,
+              );
+
+              if (response.success) {
+                forwardedCallbacks++;
+                this.logger.log(
+                  `Successfully forwarded callback to: ${walletVC.watcherCallbackUrl}`,
+                  'WalletService.processWatchCallback',
+                );
+              } else {
+                failedCallbacks++;
+                this.logger.logError(
+                  `Failed to forward callback to: ${walletVC.watcherCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
+                  new Error(response.message),
+                  'WalletService.processWatchCallback',
+                );
+              }
+            } catch (error) {
+              failedCallbacks++;
+              this.logger.logError(
+                `Error forwarding callback to: ${walletVC.watcherCallbackUrl}`,
+                error,
+                'WalletService.processWatchCallback',
+              );
+            }
+          } else {
+            this.logger.log(
+              `Skipping callback forwarding to wallet backend URL: ${walletVC.watcherCallbackUrl}`,
+              'WalletService.processWatchCallback',
+            );
+          }
+        } else {
+          this.logger.log(
+            `No watcher callback URL set for wallet VC: ${walletVC.vcPublicId}`,
+            'WalletService.processWatchCallback',
+          );
+        }
+      }
+
+      return {
+        statusCode: 200,
+        message: 'Watch callback processed successfully',
+        data: {
+          processed: true,
+          timestamp: new Date().toISOString(),
+          recordPublicId: data.recordPublicId,
+          forwardedCallbacks,
+          failedCallbacks,
+          totalRecords: walletVCs.length,
+        },
+      };
+    } catch (error) {
+      this.logger.logError(
+        'Error processing watch callback',
+        error,
+        'WalletService.processWatchCallback',
+      );
+      return {
+        statusCode: 500,
+        message: 'Failed to process watch callback',
+        data: {
+          processed: false,
+          timestamp: new Date().toISOString(),
+          recordPublicId: data.recordPublicId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+    }
+  }
+
+  /**
+   * Forward callback data to external URL
+   */
+  private async forwardCallbackToExternalUrl(
+    callbackUrl: string,
+    data: WatchCallbackDto,
+  ): Promise<{ success: boolean; statusCode: number; message: string }> {
+    try {
+      const response = await axios.post(callbackUrl, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
+      });
+
+      // Consider 200 or 201 as success status codes
+      const isSuccess = response.status === 200 || response.status === 201;
+
+      return {
+        success: isSuccess,
+        statusCode: response.status,
+        message: isSuccess 
+          ? `Successfully forwarded callback (HTTP ${response.status})`
+          : `Callback forwarded but returned status ${response.status}`,
+      };
+    } catch (error: any) {
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        return {
+          success: false,
+          statusCode: error.response.status,
+          message: `HTTP ${error.response.status}: ${error.response.statusText || 'Unknown error'}`,
+        };
+      } else if (error.request) {
+        // The request was made but no response was received
+        return {
+          success: false,
+          statusCode: 0,
+          message: 'No response received from callback URL',
+        };
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        return {
+          success: false,
+          statusCode: 0,
+          message: error.message || 'Unknown error occurred',
+        };
+      }
+    }
   }
 }

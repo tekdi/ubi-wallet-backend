@@ -101,6 +101,21 @@ export class WalletVCService {
     }
   }
 
+  async getVCsByPublicId(vcPublicId: string): Promise<WalletVC[]> {
+    try {
+      return await this.walletVCRepository.find({
+        where: { vcPublicId },
+      });
+    } catch (error) {
+      this.logger.logError(
+        'Failed to get VCs by public ID',
+        error,
+        'WalletVCService.getVCsByPublicId',
+      );
+      throw error;
+    }
+  }
+
   async getAllVCs(provider?: string): Promise<WalletVC[]> {
     try {
       const query = this.walletVCRepository.createQueryBuilder('walletVC');
