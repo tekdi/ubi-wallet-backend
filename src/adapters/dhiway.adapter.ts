@@ -514,6 +514,33 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const messageData = messageResponse.data as ApiResponse;
 
+      // Extract the VC ID from the QR data URL
+      const vcPublicId = qrData.split('/').pop();
+      if (!vcPublicId) {
+        throw new Error('Could not extract VC ID from QR data URL');
+      }
+
+      // Automatically add a watcher for the uploaded VC
+      try {
+        const watchData: WatchVcDto = {
+          vcPublicId: vcPublicId,
+        };
+
+        await this.watchVC(watchData, token);
+        this.logger.log(
+          'Watcher automatically added for uploaded VC',
+          'uploadVCFromQR',
+        );
+      } catch (watchError) {
+        // Log the error but don't fail the upload
+        this.logger.error(
+          'Failed to add watcher for uploaded VC: ' +
+            (watchError instanceof Error
+              ? watchError.message
+              : 'Unknown error'),
+        );
+      }
+
       return {
         statusCode: 200,
         message: 'VC uploaded successfully from QR',

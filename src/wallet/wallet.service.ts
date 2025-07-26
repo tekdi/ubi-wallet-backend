@@ -525,4 +525,42 @@ export class WalletService {
       }
     }
   }
+
+  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
+    if (!this.isWatchSupported()) {
+      return {
+        statusCode: 400,
+        message: 'Watch functionality not supported by this wallet provider',
+      };
+    }
+    return await this.walletAdapter.watchVC!(data, token);
+  }
+
+  private isWatchSupported(): boolean {
+    return (
+      'watchVC' in this.walletAdapter &&
+      typeof this.walletAdapter.watchVC === 'function'
+    );
+  }
+
+  processWatchCallback(data: WatchCallbackDto) {
+    // Process watch callback notification
+    // This method can be extended to implement custom logic
+    // such as sending notifications to users, updating local cache, etc.
+
+    console.log('Processing watch callback:', data);
+
+    // Example: You could implement notification logic here
+    // await this.notificationService.sendNotification(data);
+
+    return {
+      statusCode: 200,
+      message: 'Watch callback processed successfully',
+      data: {
+        processed: true,
+        timestamp: new Date().toISOString(),
+        recordPublicId: data.recordPublicId,
+      },
+    };
+  }
 }
