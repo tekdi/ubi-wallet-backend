@@ -16,8 +16,8 @@ import {
   WatchVcDto,
   WatchVcResponse,
 } from './interfaces/wallet-adapter.interface';
-import { UserService } from '../users/user.service';
 import { LoggerService } from '../common/logger/logger.service';
+import { UserService } from '../users/user.service';
 
 interface ApiResponse {
   accountId?: string;
@@ -63,8 +63,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   private readonly apiKey: string;
 
   constructor(
-    private readonly userService: UserService,
     private readonly logger: LoggerService,
+    private readonly userService: UserService,
   ) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
@@ -86,29 +86,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
   async onboardUser(data: OnboardUserDto): Promise<OnboardedUserResponse> {
     try {
-      // Check if username already exists
-      const usernameExists = await this.userService.checkUsernameExists(
-        data.username,
-      );
-      if (usernameExists) {
-        return {
-          statusCode: 409,
-          message: 'Username already exists',
-        };
-      }
-
-      // Check if email already exists (if email is provided)
-      if (data.email) {
-        const emailExists = await this.userService.checkEmailExists(data.email);
-        if (emailExists) {
-          return {
-            statusCode: 409,
-            message: 'Email already registered',
-          };
-        }
-      }
-
-      // First, create user in Dhiway wallet service
+      // Create user in Dhiway wallet service
       const externalUserId = data.externalUserId || data.username;
       const response = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/custom-user/create`,
@@ -125,20 +103,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const token = responseData.token || '';
       const did = responseData.did;
 
-      // Then create user in local database
-      const user = await this.userService.createUser({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        accountId,
-        username: data.username,
-        password: data.password,
-        token,
-        did,
-        phone: data.phone,
-        email: data.email,
-        createdBy: 'system',
-      });
-
       return {
         statusCode: 200,
         message: 'User onboarded successfully',
@@ -147,24 +111,16 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           token,
           did,
           user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            username: user.username,
-            accountId: user.accountId,
-            status: user.status,
+            id: '', // Will be set by wallet service
+            firstName: data.firstName,
+            lastName: data.lastName,
+            username: data.username,
+            accountId,
+            status: 'ACTIVE',
           },
         },
       };
     } catch (error: unknown) {
-      // Handle specific database constraint errors
-      if (error instanceof Error) {
-        return {
-          statusCode: 409,
-          message: error.message || 'Failed to onboard user',
-        };
-      }
-
       this.logger.logError('Failed to onboard user', error, 'onboardUser');
       return {
         statusCode: 500,
@@ -175,65 +131,20 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
   async login(data: LoginRequestDto): Promise<LoginResponse> {
     try {
-      // Find user in local database
-      const user = await this.userService.findByUsername(data.username);
-      if (!user) {
-        return {
-          statusCode: 401,
-          message: 'Invalid credentials',
-        };
-      }
-
-      // Validate password
-      const isValidPassword = await this.userService.validatePassword(
-        user,
-        data.password,
-      );
-      if (!isValidPassword) {
-        return {
-          statusCode: 401,
-          message: 'Invalid credentials',
-        };
-      }
-
-      // Check if user is blocked
-      if (user.blocked) {
-        return {
-          statusCode: 403,
-          message: 'User account is blocked',
-        };
-      }
-
-      // Get fresh token from Dhiway if needed
-      let token = user.token;
-      if (!token) {
-        // Regenerate token from Dhiway
-        const tokenResponse = await axios.post(
-          `${this.dhiwayBaseUrl}/api/v1/custom-user/regenerate-token`,
-          {
-            accountId: user.accountId,
-          },
-          { headers: this.getHeaders() },
-        );
-
-        const tokenData = tokenResponse.data as ApiResponse;
-        token = tokenData.token || '';
-
-        // Update token in local database
-        await this.userService.updateToken(user.accountId, token);
-      }
-
+      // For Dhiway adapter, we don't handle local authentication
+      // This is now handled by the wallet service
+      // We return a placeholder response that will be overridden by wallet service
       return {
         statusCode: 200,
         message: 'Login successful',
         data: {
-          token,
-          accountId: user.accountId,
+          token: 'placeholder-token',
+          accountId: 'placeholder-account-id',
           user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            username: user.username,
+            id: '',
+            firstName: '',
+            lastName: '',
+            username: '',
           },
         },
       };
@@ -513,7 +424,14 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     token: string,
   ): Promise<UploadResponse> {
     try {
-      // Get the user's DID from local database
+      if (!qrData) {
+        return {
+          statusCode: 400,
+          message: 'Unable to upload VC from QR: QR data is empty',
+        };
+      }
+
+      // Get the user's DID from local database using token
       const user = await this.userService.findByToken(token);
       if (!user) {
         return {
@@ -530,13 +448,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         };
       }
 
-      if (!qrData) {
-        return {
-          statusCode: 400,
-          message: 'Unable to upload VC from QR: QR data is empty',
-        };
-      }
-
       // Parse the QR data to extract VC
       const parsedVC = await this.extractVCFromQR(qrData);
 
@@ -544,7 +455,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       const messagePayload = this.formatMessagePayload({
         id: typeof parsedVC.id === 'string' ? parsedVC.id : 'generated-id',
         fromDid: did,
-        toDid: did, // You may want to adjust this as needed
+        toDid: did,
         document: 'string',
         vc: parsedVC,
         detailsMeta: 'string',
@@ -559,6 +470,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         detailsUser: 'custom',
         type: 'document',
       });
+
       // Check if VC already exists in wallet
       const credentialsResponse = await axios.get(
         `${this.dhiwayBaseUrl}/api/v1/cred`,
@@ -601,33 +513,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       );
 
       const messageData = messageResponse.data as ApiResponse;
-
-      // Extract the VC ID from the QR data URL
-      const vcPublicId = qrData.split('/').pop();
-      if (!vcPublicId) {
-        throw new Error('Could not extract VC ID from QR data URL');
-      }
-
-      // Automatically add a watcher for the uploaded VC
-      try {
-        const watchData: WatchVcDto = {
-          vcPublicId: vcPublicId,
-        };
-
-        await this.watchVC(watchData, token);
-        this.logger.log(
-          'Watcher automatically added for uploaded VC',
-          'uploadVCFromQR',
-        );
-      } catch (watchError) {
-        // Log the error but don't fail the upload
-        this.logger.error(
-          'Failed to add watcher for uploaded VC: ' +
-            (watchError instanceof Error
-              ? watchError.message
-              : 'Unknown error'),
-        );
-      }
 
       return {
         statusCode: 200,
@@ -673,27 +558,21 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     }
   }
 
-  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
+  async watchVC(data: WatchVcDto): Promise<WatchVcResponse> {
     try {
-      // Get the user's DID from local database using token
-      const user = await this.userService.findByToken(token);
-      if (!user) {
+      const watcherEmail = process.env.DHIWAY_WATCHER_EMAIL;
+      const callbackUrl = process.env.WALLET_SERVICE_BASE_URL;
+
+      if (!watcherEmail || !callbackUrl) {
         return {
-          statusCode: 404,
-          message: 'User not found',
+          statusCode: 500,
+          message:
+            'Watch configuration incomplete: missing required environment variables',
         };
       }
 
-      const did = user.did;
-      if (!did) {
-        return {
-          statusCode: 400,
-          message: 'User DID not found',
-        };
-      }
-
-      data.email = process.env.DHIWAY_WATCHER_EMAIL;
-      data.callbackUrl = `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`;
+      data.email = watcherEmail;
+      data.callbackUrl = `${callbackUrl}/api/wallet/vcs/watch/callback`;
 
       // Get VC data using publicId
       try {
@@ -753,6 +632,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         data: {
           watchId: responseData.messageId || 'watch-registered',
           status: 'success',
+          watcherEmail: data.email,
+          watcherCallbackUrl: data.callbackUrl,
         },
       };
     } catch (error: unknown) {
