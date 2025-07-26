@@ -6,10 +6,10 @@ import {
   Param,
   UsePipes,
   ValidationPipe,
-  Headers,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
+import { WatcherCronService } from './watcher-cron.service';
 import { OnboardUserDto } from '../dto/onboard-user.dto';
 import { UploadVcDto } from '../dto/upload-vc.dto';
 import { WatchVcDto } from '../dto/watch-vc.dto';
@@ -19,10 +19,15 @@ import {
   LoginVerifyDto,
   ResendOtpDto,
 } from '../dto/login.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { CurrentToken } from '../common/decorators/user.decorator';
 
 @Controller('api/wallet')
 export class WalletController {
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly watcherCronService: WatcherCronService,
+  ) {}
 
   @Post('onboard')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -47,42 +52,39 @@ export class WalletController {
   }
 
   @Get(':user_id/vcs')
+  @UseGuards(AuthGuard)
   async getAllVCs(
     @Param('user_id') user_id: string,
-    @Headers('authorization') authorization: string,
+    @CurrentToken() token: string,
   ) {
-    const token = this.extractToken(authorization);
     return await this.walletService.getAllVCs(user_id, token);
   }
 
   @Get(':user_id/vcs/:vcId')
+  @UseGuards(AuthGuard)
   async getVCById(
     @Param('user_id') user_id: string,
     @Param('vcId') vcId: string,
-    @Headers('authorization') authorization: string,
+    @CurrentToken() token: string,
   ) {
-    const token = this.extractToken(authorization);
     return await this.walletService.getVCById(user_id, vcId, token);
   }
 
   @Post(':user_id/vcs/upload-qr')
+  @UseGuards(AuthGuard)
   async uploadVCFromQR(
     @Param('user_id') user_id: string,
     @Body() data: UploadVcDto,
-    @Headers('authorization') authorization: string,
+    @CurrentToken() token: string,
   ) {
-    const token = this.extractToken(authorization);
     return await this.walletService.uploadVCFromQR(user_id, data, token);
   }
 
   @Post('vcs/watch')
+  @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async watchVC(
-    @Body() data: WatchVcDto,
-    @Headers('authorization') authorization: string,
-  ) {
-    const token = this.extractToken(authorization);
-    return await this.walletService.watchVC(data, token);
+  async watchVC(@Body() data: WatchVcDto) {
+    return await this.walletService.watchVC(data);
   }
 
   @Post('vcs/watch/callback')
@@ -91,18 +93,23 @@ export class WalletController {
     return this.walletService.processWatchCallback(data);
   }
 
-  private extractToken(authorization: string): string {
-    if (!authorization) {
-      throw new UnauthorizedException('Authorization header is required');
+  @Post('watcher/trigger-registration')
+  async triggerWatcherRegistration() {
+    try {
+      const result = await this.watcherCronService.triggerWatcherRegistration();
+      return {
+        statusCode: 200,
+        message: 'Watcher registration triggered successfully',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        statusCode: 500,
+        message: 'Failed to trigger watcher registration',
+        data: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
     }
-
-    const parts = authorization.split(' ');
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
-      throw new UnauthorizedException(
-        'Invalid authorization header format. Expected: Bearer <token>',
-      );
-    }
-
-    return parts[1];
   }
 }

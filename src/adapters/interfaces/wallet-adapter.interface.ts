@@ -110,6 +110,8 @@ export interface WatchVcResponse {
   data?: {
     watchId?: string;
     status: string;
+    watcherEmail?: string;
+    watcherCallbackUrl?: string;
   };
 }
 
@@ -127,7 +129,7 @@ export interface IWalletAdapter {
     qrData: string,
     token: string,
   ): Promise<UploadResponse>;
-  watchVC?(data: WatchVcDto, token: string): Promise<WatchVcResponse>;
+  watchVC?(data: WatchVcDto): Promise<WatchVcResponse>;
 }
 
 export interface IWalletAdapterWithOtp extends IWalletAdapter {
