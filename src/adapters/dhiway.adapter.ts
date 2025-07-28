@@ -130,35 +130,24 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   }
 
   async login(data: LoginRequestDto): Promise<LoginResponse> {
-    try {
-      // For Dhiway adapter, we don't handle local authentication
-      // This is now handled by the wallet service
-      // We return a placeholder response that will be overridden by wallet service
-      return {
-        statusCode: 200,
-        message: 'Login successful',
-        data: {
-          token: 'placeholder-token',
-          accountId: 'placeholder-account-id',
-          user: {
-            id: '',
-            firstName: '',
-            lastName: '',
-            username: '',
-          },
+    this.logger.logInfo('Login request received', data, 'login');
+    // For Dhiway adapter, we don't handle local authentication
+    // This is now handled by the wallet service
+    // We return a placeholder response that will be overridden by wallet service
+    return {
+      statusCode: 200,
+      message: 'Login successful',
+      data: {
+        token: 'placeholder-token',
+        accountId: 'placeholder-account-id',
+        user: {
+          id: '',
+          firstName: '',
+          lastName: '',
+          username: '',
         },
-      };
-    } catch (error) {
-      this.logger.logError(
-        'Failed to login',
-        error instanceof Error ? error.message : 'Unknown error',
-        'login',
-      );
-      return {
-        statusCode: 500,
-        message: 'Failed to login',
-      };
-    }
+      },
+    };
   }
 
   async verifyLogin(data: LoginVerifyDto): Promise<LoginVerifyResponse> {
@@ -599,15 +588,13 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           };
         }
 
-        // Update vcPublicId from response if needed
-        if (vcData.publicId) {
-          data.vcPublicId = vcData.publicId as string;
-        }
-
-        // Update identifier from response if needed
-        if (vcData.identifier) {
-          data.identifier = vcData.identifier as string;
-        }
+        // Update vcPublicId and identifier from response if needed
+        data.vcPublicId = vcData.publicId
+          ? (vcData.publicId as string)
+          : data.vcPublicId;
+        data.identifier = vcData.identifier
+          ? (vcData.identifier as string)
+          : data.identifier;
       } catch (error) {
         this.logger.error(
           'Failed to fetch VC data: ' +
@@ -636,82 +623,59 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const responseData = response.data as ApiResponse;
 
-      // Handle different HTTP status codes
-      if (response.status === 200 || response.status === 201) {
-        // Success - watcher registered
-        return {
-          statusCode: response.status,
-          message: 'VC watch registered successfully',
-          data: {
-            watchId: responseData.messageId || 'Watcher registered',
-            status: 'success',
-            watcherEmail: data.email,
-            watcherCallbackUrl: data.callbackUrl,
-          },
-        };
-      } else if (response.status === 409) {
-        // Conflict - watcher already exists (treat as success)
-        return {
-          statusCode: 200, // Return 200 to indicate success
-          message: 'VC watch already registered',
-          data: {
-            watchId: responseData.messageId || 'Watcher already exists',
-            status: 'success',
-            watcherEmail: data.email,
-            watcherCallbackUrl: data.callbackUrl,
-          },
-        };
-      } else {
-        // Other status codes - treat as failure
-        return {
-          statusCode: response.status,
-          message: `Failed to register VC watch (HTTP ${response.status})`,
-          data: {
-            watchId: responseData.messageId || 'Watcher not registered',
-            status: 'failed',
-            watcherEmail: data.email,
-            watcherCallbackUrl: data.callbackUrl,
-          },
-        };
-      }
+      // Simplified response handling
+      const isSuccess = [200, 201, 409].includes(response.status);
+      const statusCode = response.status === 409 ? 200 : response.status;
+      const message =
+        response.status === 409
+          ? 'VC watch already registered'
+          : isSuccess
+            ? 'VC watch registered successfully'
+            : `Failed to register VC watch (HTTP ${response.status})`;
+
+      return {
+        statusCode,
+        message,
+        data: {
+          watchId:
+            responseData.messageId ||
+            (isSuccess ? 'Watcher registered' : 'Watcher not registered'),
+          status: isSuccess ? 'success' : 'failed',
+          watcherEmail: data.email,
+          watcherCallbackUrl: data.callbackUrl,
+        },
+      };
     } catch (error: unknown) {
       // Handle axios errors to preserve HTTP status codes
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as any;
         if (axiosError.response) {
-          // The request was made and the server responded with a status code
           const statusCode = axiosError.response.status;
           const responseData = axiosError.response.data as ApiResponse;
+          const isSuccess = statusCode === 409; // Treat 409 as success
 
-          if (statusCode === 409) {
-            // Conflict - watcher already exists (treat as success)
-            return {
-              statusCode: 200,
-              message: 'VC watch already registered',
-              data: {
-                watchId: responseData?.messageId || 'Watcher already exists',
-                status: 'success',
-                watcherEmail: data.email,
-                watcherCallbackUrl: data.callbackUrl,
-              },
-            };
-          } else {
-            return {
-              statusCode: statusCode,
-              message: `Failed to register VC watch (HTTP ${statusCode})`,
-              data: {
-                watchId: responseData?.messageId || 'Watcher not registered',
-                status: 'failed',
-                watcherEmail: data.email,
-                watcherCallbackUrl: data.callbackUrl,
-              },
-            };
-          }
+          return {
+            statusCode: isSuccess ? 200 : statusCode,
+            message: isSuccess
+              ? 'VC watch already registered'
+              : `Failed to register VC watch (HTTP ${statusCode})`,
+            data: {
+              watchId:
+                responseData?.messageId ||
+                (isSuccess
+                  ? 'Watcher already exists'
+                  : 'Watcher not registered'),
+              status: isSuccess ? 'success' : 'failed',
+              watcherEmail: data.email,
+              watcherCallbackUrl: data.callbackUrl,
+            },
+          };
         }
       }
 
       // Handle other types of errors
-      const errorMessage = (error as ErrorWithMessage).message || 'Unknown error';
+      const errorMessage =
+        (error as ErrorWithMessage).message || 'Unknown error';
       this.logger.error(errorMessage);
       return {
         statusCode: 500,

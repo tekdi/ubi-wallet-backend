@@ -8,7 +8,7 @@ import { LoggerService } from '../common/logger/logger.service';
 export class WalletVCService {
   constructor(
     @InjectRepository(WalletVC)
-    private walletVCRepository: Repository<WalletVC>,
+    private readonly walletVCRepository: Repository<WalletVC>,
     private readonly logger: LoggerService,
   ) {}
 

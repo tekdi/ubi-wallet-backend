@@ -405,53 +405,53 @@ export class WalletService {
 
       // Process each wallet VC record
       for (const walletVC of walletVCs) {
-        if (
-          walletVC.watcherCallbackUrl &&
-          walletVC.watcherCallbackUrl.trim() !== ''
-        ) {
-          // Check if the callback URL is not the wallet backend service URL
-          if (
-            !walletBackendUrl ||
-            !walletVC.watcherCallbackUrl.includes(walletBackendUrl)
-          ) {
-            try {
-              // Forward the callback data to the external URL
-              const response = await this.forwardCallbackToExternalUrl(
-                walletVC.watcherCallbackUrl,
-                data,
-              );
+        const hasCallbackUrl = walletVC.watcherCallbackUrl?.trim();
+        const isExternalUrl =
+          hasCallbackUrl &&
+          (!walletBackendUrl || !hasCallbackUrl.includes(walletBackendUrl));
 
-              if (response.success) {
-                forwardedCallbacks++;
-                this.logger.log(
-                  `Successfully forwarded callback to: ${walletVC.watcherCallbackUrl}`,
-                  'WalletService.processWatchCallback',
-                );
-              } else {
-                failedCallbacks++;
-                this.logger.logError(
-                  `Failed to forward callback to: ${walletVC.watcherCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
-                  new Error(response.message),
-                  'WalletService.processWatchCallback',
-                );
-              }
-            } catch (error) {
-              failedCallbacks++;
-              this.logger.logError(
-                `Error forwarding callback to: ${walletVC.watcherCallbackUrl}`,
-                error,
-                'WalletService.processWatchCallback',
-              );
-            }
-          } else {
+        if (!hasCallbackUrl) {
+          this.logger.log(
+            `No watcher callback URL set for wallet VC: ${walletVC.vcPublicId}`,
+            'WalletService.processWatchCallback',
+          );
+          continue;
+        }
+
+        if (!isExternalUrl) {
+          this.logger.log(
+            `Skipping callback forwarding to wallet backend URL: ${walletVC.watcherCallbackUrl}`,
+            'WalletService.processWatchCallback',
+          );
+          continue;
+        }
+
+        try {
+          // Forward the callback data to the external URL
+          const response = await this.forwardCallbackToExternalUrl(
+            walletVC.watcherCallbackUrl,
+            data,
+          );
+
+          if (response.success) {
+            forwardedCallbacks++;
             this.logger.log(
-              `Skipping callback forwarding to wallet backend URL: ${walletVC.watcherCallbackUrl}`,
+              `Successfully forwarded callback to: ${walletVC.watcherCallbackUrl}`,
+              'WalletService.processWatchCallback',
+            );
+          } else {
+            failedCallbacks++;
+            this.logger.logError(
+              `Failed to forward callback to: ${walletVC.watcherCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
+              new Error(response.message),
               'WalletService.processWatchCallback',
             );
           }
-        } else {
-          this.logger.log(
-            `No watcher callback URL set for wallet VC: ${walletVC.vcPublicId}`,
+        } catch (error) {
+          failedCallbacks++;
+          this.logger.logError(
+            `Error forwarding callback to: ${walletVC.watcherCallbackUrl}`,
+            error,
             'WalletService.processWatchCallback',
           );
         }
