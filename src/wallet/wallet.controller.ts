@@ -92,24 +92,4 @@ export class WalletController {
   watchCallback(@Body() data: WatchCallbackDto) {
     return this.walletService.processWatchCallback(data);
   }
-
-  @Post('watcher/trigger-registration')
-  async triggerWatcherRegistration() {
-    try {
-      const result = await this.watcherCronService.triggerWatcherRegistration();
-      return {
-        statusCode: 200,
-        message: 'Watcher registration triggered successfully',
-        data: result,
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        message: 'Failed to trigger watcher registration',
-        data: {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-      };
-    }
-  }
 }

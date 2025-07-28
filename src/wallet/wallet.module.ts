@@ -5,7 +5,7 @@ import { WalletService } from './wallet.service';
 import { WalletVC } from './wallet-vc.entity';
 import { WalletVCService } from './wallet-vc.service';
 import { WatcherCronService } from './watcher-cron.service';
-import { WatcherRegistrationService } from './watcher-registration.service';
+
 import { DhiwayAdapter } from '../adapters/dhiway.adapter';
 import { UserModule } from '../users/user.module';
 import { LoggerModule } from '../common/logger/logger.module';
@@ -25,7 +25,6 @@ import { CommonModule } from '../common/common.module';
     WalletService,
     WalletVCService,
     WatcherCronService,
-    WatcherRegistrationService,
     {
       provide: 'WALLET_ADAPTER',
       useExisting: DhiwayAdapter,

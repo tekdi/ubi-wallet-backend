@@ -19,7 +19,6 @@ import {
 import { WalletVCService } from './wallet-vc.service';
 import { LoggerService } from '../common/logger/logger.service';
 import { UserService } from '../users/user.service';
-import { WatcherRegistrationService } from './watcher-registration.service';
 
 @Injectable()
 export class WalletService {
@@ -28,7 +27,6 @@ export class WalletService {
     private readonly walletVCService: WalletVCService,
     private readonly logger: LoggerService,
     private readonly userService: UserService,
-    private readonly watcherRegistrationService: WatcherRegistrationService,
   ) {}
 
   async onboardUser(data: OnboardUserDto) {
@@ -244,27 +242,13 @@ export class WalletService {
               'WalletService.uploadVCFromQR',
             );
 
-            // Attempt to register watcher for the uploaded VC
+            // Attempt to register watcher for the uploaded VC using existing watchVC method
             try {
-              const watcherResult =
-                await this.watcherRegistrationService.registerWatcherForUploadedVC(
-                  vcPublicId,
-                  providerName,
-                  user_id,
-                );
-
-              if (watcherResult.success) {
-                this.logger.log(
-                  `Watcher automatically registered for VC: ${vcPublicId}`,
-                  'WalletService.uploadVCFromQR',
-                );
-              } else {
-                this.logger.logError(
-                  `Failed to register watcher for VC: ${vcPublicId}. Status: ${watcherResult.statusCode}, Message: ${watcherResult.message}`,
-                  new Error(watcherResult.message),
-                  'WalletService.uploadVCFromQR',
-                );
-              }
+              const watchData: WatchVcDto = {
+                vcPublicId,
+                identifier: '', // Will be set by the adapter
+              };
+              await this.watchVC(watchData);
             } catch (watchError) {
               this.logger.logError(
                 `Error registering watcher for VC: ${vcPublicId}`,
@@ -305,26 +289,56 @@ export class WalletService {
       };
     }
 
-    return await this.walletAdapter.watchVC!(data);
-  }
-
-  async registerWatcherForVC(vcPublicId: string): Promise<WatchVcResponse> {
-    if (!this.isWatchSupported()) {
-      return {
-        statusCode: 400,
-        message: 'Watch functionality not supported by this wallet provider',
-      };
-    }
-
     try {
-      // Create a watch data object with the VC public ID
-      const watchData: WatchVcDto = {
-        vcPublicId,
-        identifier: '', // This will be set by the adapter based on the provider
-      };
+      // Call the adapter to register watcher
+      const result = await this.walletAdapter.watchVC!(data);
 
-      return await this.walletAdapter.watchVC!(watchData);
+      // If successful, update the database to mark watcher as registered
+      if (result.statusCode === 200 || result.statusCode === 201) {
+        try {
+          const providerName = this.getProviderName();
+
+          // Update database to mark watcher as registered
+          const updateResult = await this.walletVCService.updateWatcherStatus(
+            data.vcPublicId,
+            providerName,
+            true,
+            result.data?.watcherEmail || '',
+            result.data?.watcherCallbackUrl || '',
+          );
+
+          if (updateResult.success) {
+            this.logger.log(updateResult.message, 'WalletService.watchVC');
+          } else {
+            this.logger.logError(
+              updateResult.message,
+              new Error(updateResult.message),
+              'WalletService.watchVC',
+            );
+          }
+        } catch (dbError) {
+          this.logger.logError(
+            `Failed to update watcher status in database for VC: ${data.vcPublicId}`,
+            dbError,
+            'WalletService.watchVC',
+          );
+          // Don't fail the watch operation if database update fails
+        }
+      } else {
+        this.logger.logError(
+          `Failed to register watcher for VC: ${data.vcPublicId}. Status: ${result.statusCode}, Message: ${result.message}`,
+          new Error(result.message),
+          'WalletService.watchVC',
+        );
+      }
+
+      return result;
     } catch (error) {
+      this.logger.logError(
+        `Error registering watcher for VC: ${data.vcPublicId}`,
+        error,
+        'WalletService.watchVC',
+      );
       return {
         statusCode: 500,
         message: `Failed to register watcher for VC: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -524,43 +538,5 @@ export class WalletService {
         };
       }
     }
-  }
-
-  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
-    if (!this.isWatchSupported()) {
-      return {
-        statusCode: 400,
-        message: 'Watch functionality not supported by this wallet provider',
-      };
-    }
-    return await this.walletAdapter.watchVC!(data, token);
-  }
-
-  private isWatchSupported(): boolean {
-    return (
-      'watchVC' in this.walletAdapter &&
-      typeof this.walletAdapter.watchVC === 'function'
-    );
-  }
-
-  processWatchCallback(data: WatchCallbackDto) {
-    // Process watch callback notification
-    // This method can be extended to implement custom logic
-    // such as sending notifications to users, updating local cache, etc.
-
-    console.log('Processing watch callback:', data);
-
-    // Example: You could implement notification logic here
-    // await this.notificationService.sendNotification(data);
-
-    return {
-      statusCode: 200,
-      message: 'Watch callback processed successfully',
-      data: {
-        processed: true,
-        timestamp: new Date().toISOString(),
-        recordPublicId: data.recordPublicId,
-      },
-    };
   }
 }

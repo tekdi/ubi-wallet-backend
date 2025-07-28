@@ -89,7 +89,6 @@ The `init.sql` file includes:
 #### WatcherCronService (`src/wallet/watcher-cron.service.ts`)
 - `@Cron(CronExpression.EVERY_5_MINUTES)`: Scheduled job
 - `registerWatchersForVCs()`: Main cron job method
-- `triggerWatcherRegistration()`: Manual trigger method
 - Comprehensive error handling and logging
 
 ### 4. Wallet Service Integration

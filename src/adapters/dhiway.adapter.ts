@@ -148,8 +148,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           },
         },
       };
-    } catch (error: unknown) {
-      this.logger.logError('Failed to login', error, 'login');
+    } catch (error) {
+      this.logger.logError(
+        'Failed to login',
+        error instanceof Error ? error.message : 'Unknown error',
+        'login',
+      );
       return {
         statusCode: 500,
         message: 'Failed to login',
@@ -520,27 +524,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         throw new Error('Could not extract VC ID from QR data URL');
       }
 
-      // Automatically add a watcher for the uploaded VC
-      try {
-        const watchData: WatchVcDto = {
-          vcPublicId: vcPublicId,
-        };
-
-        await this.watchVC(watchData, token);
-        this.logger.log(
-          'Watcher automatically added for uploaded VC',
-          'uploadVCFromQR',
-        );
-      } catch (watchError) {
-        // Log the error but don't fail the upload
-        this.logger.error(
-          'Failed to add watcher for uploaded VC: ' +
-            (watchError instanceof Error
-              ? watchError.message
-              : 'Unknown error'),
-        );
-      }
-
       return {
         statusCode: 200,
         message: 'VC uploaded successfully from QR',
@@ -653,19 +636,82 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       const responseData = response.data as ApiResponse;
 
-      return {
-        statusCode: 200,
-        message: 'VC watch registered successfully',
-        data: {
-          watchId: responseData.messageId || 'watch-registered',
-          status: 'success',
-          watcherEmail: data.email,
-          watcherCallbackUrl: data.callbackUrl,
-        },
-      };
+      // Handle different HTTP status codes
+      if (response.status === 200 || response.status === 201) {
+        // Success - watcher registered
+        return {
+          statusCode: response.status,
+          message: 'VC watch registered successfully',
+          data: {
+            watchId: responseData.messageId || 'Watcher registered',
+            status: 'success',
+            watcherEmail: data.email,
+            watcherCallbackUrl: data.callbackUrl,
+          },
+        };
+      } else if (response.status === 409) {
+        // Conflict - watcher already exists (treat as success)
+        return {
+          statusCode: 200, // Return 200 to indicate success
+          message: 'VC watch already registered',
+          data: {
+            watchId: responseData.messageId || 'Watcher already exists',
+            status: 'success',
+            watcherEmail: data.email,
+            watcherCallbackUrl: data.callbackUrl,
+          },
+        };
+      } else {
+        // Other status codes - treat as failure
+        return {
+          statusCode: response.status,
+          message: `Failed to register VC watch (HTTP ${response.status})`,
+          data: {
+            watchId: responseData.messageId || 'Watcher not registered',
+            status: 'failed',
+            watcherEmail: data.email,
+            watcherCallbackUrl: data.callbackUrl,
+          },
+        };
+      }
     } catch (error: unknown) {
-      const errorMessage =
-        (error as ErrorWithMessage).message || 'Unknown error';
+      // Handle axios errors to preserve HTTP status codes
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response) {
+          // The request was made and the server responded with a status code
+          const statusCode = axiosError.response.status;
+          const responseData = axiosError.response.data as ApiResponse;
+
+          if (statusCode === 409) {
+            // Conflict - watcher already exists (treat as success)
+            return {
+              statusCode: 200,
+              message: 'VC watch already registered',
+              data: {
+                watchId: responseData?.messageId || 'Watcher already exists',
+                status: 'success',
+                watcherEmail: data.email,
+                watcherCallbackUrl: data.callbackUrl,
+              },
+            };
+          } else {
+            return {
+              statusCode: statusCode,
+              message: `Failed to register VC watch (HTTP ${statusCode})`,
+              data: {
+                watchId: responseData?.messageId || 'Watcher not registered',
+                status: 'failed',
+                watcherEmail: data.email,
+                watcherCallbackUrl: data.callbackUrl,
+              },
+            };
+          }
+        }
+      }
+
+      // Handle other types of errors
+      const errorMessage = (error as ErrorWithMessage).message || 'Unknown error';
       this.logger.error(errorMessage);
       return {
         statusCode: 500,

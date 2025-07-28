@@ -23,7 +23,6 @@ export class WalletVCService {
         provider,
         watcherRegistered: false,
         createdBy,
-        updatedBy: createdBy,
       });
 
       return await this.walletVCRepository.save(walletVC);
@@ -41,15 +40,39 @@ export class WalletVCService {
     vcPublicId: string,
     provider: string,
     watcherRegistered: boolean,
-    updatedBy: string = '',
     watcherEmail: string,
     watcherCallbackUrl: string,
-  ): Promise<void> {
+  ): Promise<{ success: boolean; message: string }> {
     try {
+      // First check if watcher is already registered
+      const existingVC = await this.walletVCRepository.findOne({
+        where: { vcPublicId, provider },
+      });
+
+      if (!existingVC) {
+        return {
+          success: false,
+          message: `Wallet VC not found for vcPublicId: ${vcPublicId} and provider: ${provider}`,
+        };
+      }
+
+      if (existingVC.watcherRegistered) {
+        return {
+          success: true,
+          message: `Watcher is already registered for VC: ${vcPublicId}`,
+        };
+      }
+
+      // Only update if watcher is not already registered
       await this.walletVCRepository.update(
         { vcPublicId, provider },
-        { watcherRegistered, updatedBy, watcherEmail, watcherCallbackUrl},
+        { watcherRegistered, watcherEmail, watcherCallbackUrl },
       );
+
+      return {
+        success: true,
+        message: `Watcher status updated successfully for VC: ${vcPublicId}`,
+      };
     } catch (error) {
       this.logger.logError(
         'Failed to update watcher status',

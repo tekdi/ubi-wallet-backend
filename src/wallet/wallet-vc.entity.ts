@@ -46,7 +46,7 @@ export class WalletVC {
     name: 'created_by',
     type: 'varchar',
     length: 255,
-    default: '',
+    default: null,
   })
   createdBy: string;
 
@@ -54,7 +54,7 @@ export class WalletVC {
     name: 'updated_by',
     type: 'varchar',
     length: 255,
-    default: '',
+    default: null,
   })
   updatedBy: string;
 }
