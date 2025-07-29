@@ -48,18 +48,27 @@ export class LoggerService extends Logger {
     });
   }
 
-  private getErrorProperty(error: unknown, property: string): string | number | undefined {
+  private getErrorProperty(
+    error: unknown,
+    property: string,
+  ): string | number | undefined {
     if (error && typeof error === 'object' && property in error) {
-      return (error as Record<string, unknown>)[property] as string | number | undefined;
+      return (error as Record<string, unknown>)[property] as
+        | string
+        | number
+        | undefined;
     }
     return undefined;
   }
 
-  private getErrorPropertyAsNumber(error: unknown, property: string): number | undefined {
+  private getErrorPropertyAsNumber(
+    error: unknown,
+    property: string,
+  ): number | undefined {
     const value = this.getErrorProperty(error, property);
     if (value && typeof value === 'string') {
       return Number(value);
     }
     return undefined;
   }
-} 
+}

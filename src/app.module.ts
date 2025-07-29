@@ -5,8 +5,10 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { WalletModule } from './wallet/wallet.module';
+import { HousekeepingModule } from './housekeeping/housekeeping.module';
 import { User } from './users/user.entity';
 import { WalletVC } from './wallet/wallet-vc.entity';
+import { WalletVCWatcher } from './wallet/wallet-vc-watcher.entity';
 import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
@@ -21,13 +23,14 @@ import { LoggerModule } from './common/logger/logger.module';
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_DATABASE || 'wallet_db',
-      entities: [User, WalletVC],
+      entities: [User, WalletVC, WalletVCWatcher],
       synchronize: process.env.NODE_ENV !== 'production', // Auto-create tables in development
       logging: process.env.NODE_ENV !== 'production',
     }),
     ScheduleModule.forRoot(),
     LoggerModule,
     WalletModule,
+    HousekeepingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

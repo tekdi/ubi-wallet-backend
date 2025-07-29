@@ -17,6 +17,7 @@ import {
   ResendOtpDto,
 } from '../dto/login.dto';
 import { WalletVCService } from './wallet-vc.service';
+import { WalletVCWatcherService } from './wallet-vc-watcher.service';
 import { LoggerService } from '../common/logger/logger.service';
 import { UserService } from '../users/user.service';
 
@@ -25,6 +26,7 @@ export class WalletService {
   constructor(
     @Inject('WALLET_ADAPTER') private readonly walletAdapter: IWalletAdapter,
     private readonly walletVCService: WalletVCService,
+    private readonly walletVCWatcherService: WalletVCWatcherService,
     private readonly logger: LoggerService,
     private readonly userService: UserService,
   ) {}
@@ -230,11 +232,23 @@ export class WalletService {
             // Get provider name from adapter
             const providerName = this.getProviderName();
 
+            // Get user ID from token
+            const user = await this.userService.findByToken(token);
+            if (!user) {
+              this.logger.logError(
+                'User not found for token during VC upload',
+                new Error('User not found'),
+                'WalletService.uploadVCFromQR',
+              );
+              // Continue with upload even if user lookup fails
+            }
+
             // Create wallet VC record
             await this.walletVCService.createWalletVC(
               vcPublicId,
               providerName,
-              user_id,
+              user?.id || '',
+              user?.id || '', // Use user UUID for createdBy
             );
 
             this.logger.log(
@@ -248,7 +262,7 @@ export class WalletService {
                 vcPublicId,
                 identifier: '', // Will be set by the adapter
               };
-              await this.watchVC(watchData);
+              await this.watchVC(watchData, token);
             } catch (watchError) {
               this.logger.logError(
                 `Error registering watcher for VC: ${vcPublicId}`,
@@ -281,7 +295,7 @@ export class WalletService {
     }
   }
 
-  async watchVC(data: WatchVcDto): Promise<WatchVcResponse> {
+  async watchVC(data: WatchVcDto, token: string): Promise<WatchVcResponse> {
     if (!this.isWatchSupported()) {
       return {
         statusCode: 400,
@@ -290,22 +304,62 @@ export class WalletService {
     }
 
     try {
+      // Get user ID from token
+      const user = await this.userService.findByToken(token);
+      if (!user) {
+        return {
+          statusCode: 401,
+          message: 'Invalid token or user not found',
+        };
+      }
+
       // Call the adapter to register watcher
       const result = await this.walletAdapter.watchVC!(data);
 
-      // If successful, update the database to mark watcher as registered
+      // If successful, create or update watcher record
       if (result.statusCode === 200 || result.statusCode === 201) {
         try {
-          const providerName = this.getProviderName();
+          const provider = this.getProviderName();
+          const watcherEmail = result.data?.watcherEmail || '';
+          const watcherCallbackUrl = result.data?.watcherCallbackUrl || '';
 
-          // Update database to mark watcher as registered
-          const updateResult = await this.walletVCService.updateWatcherStatus(
-            data.vcPublicId,
-            providerName,
-            true,
-            result.data?.watcherEmail || '',
-            result.data?.watcherCallbackUrl || '',
-          );
+          // First check if watcher exists with the specific combination
+          const existingWatcher =
+            await this.walletVCWatcherService.findWatcherByCombination(
+              data.vcPublicId,
+              user.id,
+              provider,
+              watcherEmail,
+              watcherCallbackUrl,
+            );
+
+          if (!existingWatcher) {
+            // Create new watcher record
+            this.logger.log(
+              `Creating new watcher record for VC: ${data.vcPublicId}`,
+              'WalletService.watchVC',
+            );
+            await this.walletVCWatcherService.createWatcher(
+              data.vcPublicId,
+              user.id,
+              provider,
+              watcherEmail,
+              watcherCallbackUrl,
+              user.id, // createdBy
+            );
+          }
+
+          // Now update the watcher status
+          const updateResult =
+            await this.walletVCWatcherService.updateWatcherStatus(
+              data.vcPublicId,
+              user.id,
+              provider,
+              watcherEmail,
+              true,
+              watcherCallbackUrl,
+              user.id, // updatedBy
+            );
 
           if (updateResult.success) {
             this.logger.log(updateResult.message, 'WalletService.watchVC');
@@ -366,7 +420,7 @@ export class WalletService {
         'WalletService.processWatchCallback',
       );
 
-      // Get records from wallet_vcs table where vc_public_id matches recordPublicId
+      // Get watchers from wallet_vc_watchers table where vc_public_id matches recordPublicId
       if (!data.recordPublicId) {
         return {
           statusCode: 400,
@@ -378,18 +432,19 @@ export class WalletService {
         };
       }
 
-      const walletVCs = await this.walletVCService.getVCsByPublicId(
-        data.recordPublicId,
-      );
+      const watchers =
+        await this.walletVCWatcherService.getWatchersByVcPublicId(
+          data.recordPublicId,
+        );
 
-      if (!walletVCs || walletVCs.length === 0) {
+      if (!watchers || watchers.length === 0) {
         this.logger.log(
-          `No wallet VC records found for recordPublicId: ${data.recordPublicId}`,
+          `No watchers found for recordPublicId: ${data.recordPublicId}`,
           'WalletService.processWatchCallback',
         );
         return {
           statusCode: 404,
-          message: 'No wallet VC records found for the given recordPublicId',
+          message: 'No watchers found for the given recordPublicId',
           data: {
             processed: false,
             timestamp: new Date().toISOString(),
@@ -403,16 +458,16 @@ export class WalletService {
       let forwardedCallbacks = 0;
       let failedCallbacks = 0;
 
-      // Process each wallet VC record
-      for (const walletVC of walletVCs) {
-        const hasCallbackUrl = walletVC.watcherCallbackUrl?.trim();
+      // Process each watcher record
+      for (const watcher of watchers) {
+        const hasCallbackUrl = watcher.watcherCallbackUrl?.trim();
         const isExternalUrl =
           hasCallbackUrl &&
           (!walletBackendUrl || !hasCallbackUrl.includes(walletBackendUrl));
 
         if (!hasCallbackUrl) {
           this.logger.log(
-            `No watcher callback URL set for wallet VC: ${walletVC.vcPublicId}`,
+            `No watcher callback URL set for watcher: ${watcher.id}`,
             'WalletService.processWatchCallback',
           );
           continue;
@@ -420,7 +475,7 @@ export class WalletService {
 
         if (!isExternalUrl) {
           this.logger.log(
-            `Skipping callback forwarding to wallet backend URL: ${walletVC.watcherCallbackUrl}`,
+            `Skipping callback forwarding to wallet backend URL: ${watcher.watcherCallbackUrl}`,
             'WalletService.processWatchCallback',
           );
           continue;
@@ -429,20 +484,20 @@ export class WalletService {
         try {
           // Forward the callback data to the external URL
           const response = await this.forwardCallbackToExternalUrl(
-            walletVC.watcherCallbackUrl,
+            watcher.watcherCallbackUrl,
             data,
           );
 
           if (response.success) {
             forwardedCallbacks++;
             this.logger.log(
-              `Successfully forwarded callback to: ${walletVC.watcherCallbackUrl}`,
+              `Successfully forwarded callback to: ${watcher.watcherCallbackUrl}`,
               'WalletService.processWatchCallback',
             );
           } else {
             failedCallbacks++;
             this.logger.logError(
-              `Failed to forward callback to: ${walletVC.watcherCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
+              `Failed to forward callback to: ${watcher.watcherCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
               new Error(response.message),
               'WalletService.processWatchCallback',
             );
@@ -450,7 +505,7 @@ export class WalletService {
         } catch (error) {
           failedCallbacks++;
           this.logger.logError(
-            `Error forwarding callback to: ${walletVC.watcherCallbackUrl}`,
+            `Error forwarding callback to: ${watcher.watcherCallbackUrl}`,
             error,
             'WalletService.processWatchCallback',
           );
@@ -466,7 +521,7 @@ export class WalletService {
           recordPublicId: data.recordPublicId,
           forwardedCallbacks,
           failedCallbacks,
-          totalRecords: walletVCs.length,
+          totalRecords: watchers.length,
         },
       };
     } catch (error) {
@@ -509,7 +564,7 @@ export class WalletService {
       return {
         success: isSuccess,
         statusCode: response.status,
-        message: isSuccess 
+        message: isSuccess
           ? `Successfully forwarded callback (HTTP ${response.status})`
           : `Callback forwarded but returned status ${response.status}`,
       };

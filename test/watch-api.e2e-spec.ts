@@ -31,7 +31,9 @@ describe('Watch API (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.statusCode).toBe(200);
-          expect(res.body.message).toContain('VC watch registered successfully');
+          expect(res.body.message).toContain(
+            'VC watch registered successfully',
+          );
           expect(res.body.data).toBeDefined();
           expect(res.body.data.watchId).toBeDefined();
           expect(res.body.data.status).toBe('success');
@@ -48,7 +50,9 @@ describe('Watch API (e2e)', () => {
         .expect(400)
         .expect((res) => {
           expect(res.body.statusCode).toBe(400);
-          expect(res.body.message).toContain('Watch functionality not supported');
+          expect(res.body.message).toContain(
+            'Watch functionality not supported',
+          );
         });
     });
 
@@ -84,7 +88,9 @@ describe('Watch API (e2e)', () => {
         .expect(200)
         .expect((res) => {
           expect(res.body.statusCode).toBe(200);
-          expect(res.body.message).toContain('Watch callback processed successfully');
+          expect(res.body.message).toContain(
+            'Watch callback processed successfully',
+          );
           expect(res.body.data).toBeDefined();
           expect(res.body.data.processed).toBe(true);
           expect(res.body.data.user_id).toBe('test-user');
@@ -92,4 +98,4 @@ describe('Watch API (e2e)', () => {
         });
     });
   });
-}); 
+});

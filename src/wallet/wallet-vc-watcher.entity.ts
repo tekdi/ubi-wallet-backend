@@ -6,19 +6,38 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity('wallet_vcs')
-export class WalletVC {
+@Entity('wallet_vc_watchers')
+export class WalletVCWatcher {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ name: 'vc_public_id', type: 'varchar', length: 255 })
   vcPublicId: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  userId: string | null;
+
+  @Column({ name: 'provider', type: 'varchar', length: 100, default: null })
   provider: string;
 
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
-  userId: string;
+  @Column({ name: 'watcher_registered', type: 'boolean', default: false })
+  watcherRegistered: boolean;
+
+  @Column({
+    name: 'watcher_email',
+    type: 'varchar',
+    length: 500,
+    default: null,
+  })
+  watcherEmail: string;
+
+  @Column({
+    name: 'watcher_callback_url',
+    type: 'varchar',
+    length: 500,
+    default: null,
+  })
+  watcherCallbackUrl: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

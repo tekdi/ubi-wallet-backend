@@ -83,8 +83,8 @@ export class WalletController {
   @Post('vcs/watch')
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async watchVC(@Body() data: WatchVcDto) {
-    return await this.walletService.watchVC(data);
+  async watchVC(@Body() data: WatchVcDto, @CurrentToken() token: string) {
+    return await this.walletService.watchVC(data, token);
   }
 
   @Post('vcs/watch/callback')

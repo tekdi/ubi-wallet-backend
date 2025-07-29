@@ -13,4 +13,4 @@ export const CurrentToken = createParamDecorator(
     const request = ctx.switchToHttp().getRequest<{ token: string }>();
     return request.token;
   },
-); 
+);

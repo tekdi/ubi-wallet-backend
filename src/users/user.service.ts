@@ -71,6 +71,12 @@ export class UserService {
     });
   }
 
+  async findById(id: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { id, status: UserStatus.ACTIVE, blocked: false },
+    });
+  }
+
   async updateToken(accountId: string, token: string): Promise<void> {
     await this.userRepository.update(
       { accountId },

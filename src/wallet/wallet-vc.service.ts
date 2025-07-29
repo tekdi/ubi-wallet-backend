@@ -15,13 +15,28 @@ export class WalletVCService {
   async createWalletVC(
     vcPublicId: string,
     provider: string,
+    userId: string,
     createdBy: string = '',
   ): Promise<WalletVC> {
     try {
+      // Check if a record already exists for this combination
+      const existingVC = await this.walletVCRepository.findOne({
+        where: { vcPublicId, provider, userId },
+      });
+
+      if (existingVC) {
+        this.logger.log(
+          `Wallet VC record already exists for vcPublicId: ${vcPublicId}, provider: ${provider}, userId: ${userId}`,
+          'WalletVCService.createWalletVC',
+        );
+        return existingVC;
+      }
+
+      // Create new record only if it doesn't exist
       const walletVC = this.walletVCRepository.create({
         vcPublicId,
         provider,
-        watcherRegistered: false,
+        userId,
         createdBy,
       });
 
@@ -31,76 +46,6 @@ export class WalletVCService {
         'Failed to create wallet VC record',
         error,
         'WalletVCService.createWalletVC',
-      );
-      throw error;
-    }
-  }
-
-  async updateWatcherStatus(
-    vcPublicId: string,
-    provider: string,
-    watcherRegistered: boolean,
-    watcherEmail: string,
-    watcherCallbackUrl: string,
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      // First check if watcher is already registered
-      const existingVC = await this.walletVCRepository.findOne({
-        where: { vcPublicId, provider },
-      });
-
-      if (!existingVC) {
-        return {
-          success: false,
-          message: `Wallet VC not found for vcPublicId: ${vcPublicId} and provider: ${provider}`,
-        };
-      }
-
-      if (existingVC.watcherRegistered) {
-        return {
-          success: true,
-          message: `Watcher is already registered for VC: ${vcPublicId}`,
-        };
-      }
-
-      // Only update if watcher is not already registered
-      await this.walletVCRepository.update(
-        { vcPublicId, provider },
-        { watcherRegistered, watcherEmail, watcherCallbackUrl },
-      );
-
-      return {
-        success: true,
-        message: `Watcher status updated successfully for VC: ${vcPublicId}`,
-      };
-    } catch (error) {
-      this.logger.logError(
-        'Failed to update watcher status',
-        error,
-        'WalletVCService.updateWatcherStatus',
-      );
-      throw error;
-    }
-  }
-
-  async getVCsWithoutWatcher(provider?: string): Promise<WalletVC[]> {
-    try {
-      const query = this.walletVCRepository
-        .createQueryBuilder('walletVC')
-        .where('walletVC.watcherRegistered = :watcherRegistered', {
-          watcherRegistered: false,
-        });
-
-      if (provider) {
-        query.andWhere('walletVC.provider = :provider', { provider });
-      }
-
-      return await query.getMany();
-    } catch (error) {
-      this.logger.logError(
-        'Failed to get VCs without watcher',
-        error,
-        'WalletVCService.getVCsWithoutWatcher',
       );
       throw error;
     }
