@@ -7,4 +7,4 @@ import { UserModule } from '../users/user.module';
   providers: [AuthGuard],
   exports: [AuthGuard],
 })
-export class CommonModule {} 
+export class CommonModule {}

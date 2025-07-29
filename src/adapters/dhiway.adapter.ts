@@ -235,18 +235,30 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
                 : '') || 'Verifiable Credential';
 
             // Check if the parsed object has 'validFrom' and 'validUntil' fields
-            if (parsedVC && typeof parsedVC === 'object' && 'validFrom' in parsedVC) {
-              expiresAt = String((parsedVC as Record<string, unknown>).validUntil ?? '');
-              issuedAt = String((parsedVC as Record<string, unknown>).validFrom ?? '');
+            if (
+              parsedVC &&
+              typeof parsedVC === 'object' &&
+              'validFrom' in parsedVC
+            ) {
+              expiresAt = String(
+                (parsedVC as Record<string, unknown>).validUntil ?? '',
+              );
+              issuedAt = String(
+                (parsedVC as Record<string, unknown>).validFrom ?? '',
+              );
             }
           } catch {
             // If parsing fails, leave dates as empty strings
             expiresAt = '';
             issuedAt = '';
           }
-        } else if (cred.credentialVC && typeof cred.credentialVC === 'object' && 'validFrom' in cred.credentialVC) {
-          expiresAt = String((cred.credentialVC as Record<string, unknown>).validUntil ?? '');
-          issuedAt = String((cred.credentialVC as Record<string, unknown>).validFrom ?? '');
+        } else if (
+          cred.credentialVC &&
+          typeof cred.credentialVC === 'object' &&
+          'validFrom' in cred.credentialVC
+        ) {
+          expiresAt = String(cred.credentialVC.validUntil ?? '');
+          issuedAt = String(cred.credentialVC.validFrom ?? '');
         }
 
         // Get the document title from the credential details
@@ -489,12 +501,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         return false;
       });
 
-      if (existingCredential) {
-        return {
-          statusCode: 409,
-          message: 'This verifiable credential is already added to your wallet',
-        };
-      }
+      // if (existingCredential) {
+      //   return {
+      //     statusCode: 409,
+      //     message: 'This verifiable credential is already added to your wallet',
+      //   };
+      // }
 
       // Create a message with the VC
       const messageResponse = await axios.post(

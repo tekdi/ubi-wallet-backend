@@ -20,4 +20,4 @@ export class WatchCallbackDto {
   @IsString()
   @IsOptional()
   timestamp?: string;
-} 
+}

@@ -96,4 +96,4 @@ describe('UserService', () => {
       expect(mockRepository.findOne).not.toHaveBeenCalled();
     });
   });
-}); 
+});
