@@ -501,12 +501,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         return false;
       });
 
-      // if (existingCredential) {
-      //   return {
-      //     statusCode: 409,
-      //     message: 'This verifiable credential is already added to your wallet',
-      //   };
-      // }
+      if (existingCredential) {
+        return {
+          statusCode: 409,
+          message: 'This verifiable credential is already added to your wallet',
+        };
+      }
 
       // Create a message with the VC
       const messageResponse = await axios.post(
