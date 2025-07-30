@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEmail,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class WatchVcDto {
   @IsString()
@@ -14,10 +21,12 @@ export class WatchVcDto {
   identifier?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl()
+  @MaxLength(1500)
   callbackUrl?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUrl()
+  @MaxLength(1500)
   forwardWatcherCallbackUrl?: string;
 }
