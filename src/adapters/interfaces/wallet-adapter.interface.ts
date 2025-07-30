@@ -102,6 +102,7 @@ export interface WatchVcDto {
   identifier?: string;
   email?: string;
   callbackUrl?: string;
+  forwardWatcherCallbackUrl?: string;
 }
 
 export interface WatchVcResponse {

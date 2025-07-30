@@ -571,19 +571,19 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
   async watchVC(data: WatchVcDto): Promise<WatchVcResponse> {
     try {
-      const watcherEmail = process.env.DHIWAY_WATCHER_EMAIL;
-      const callbackUrl = process.env.WALLET_SERVICE_BASE_URL;
+      // Set email and callback URL with fallbacks
+      data.email = data?.email || process.env.DHIWAY_WATCHER_EMAIL;
+      data.callbackUrl =
+        data?.callbackUrl ||
+        `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`;
 
-      if (!watcherEmail || !callbackUrl) {
+      if (!data.email || !data.callbackUrl) {
         return {
           statusCode: 500,
           message:
             'Watch configuration incomplete: missing required environment variables',
         };
       }
-
-      data.email = watcherEmail;
-      data.callbackUrl = `${callbackUrl}/api/wallet/vcs/watch/callback`;
 
       // Get VC data using publicId
       try {

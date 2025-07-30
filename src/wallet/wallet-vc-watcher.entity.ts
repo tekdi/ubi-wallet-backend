@@ -34,10 +34,18 @@ export class WalletVCWatcher {
   @Column({
     name: 'watcher_callback_url',
     type: 'varchar',
-    length: 500,
+    length: 1500,
     default: null,
   })
   watcherCallbackUrl: string;
+
+  @Column({
+    name: 'forward_watcher_callback_url',
+    type: 'varchar',
+    length: 1500,
+    default: null,
+  })
+  forwardWatcherCallbackUrl: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
