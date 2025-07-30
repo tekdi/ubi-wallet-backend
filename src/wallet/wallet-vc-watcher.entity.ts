@@ -34,7 +34,7 @@ export class WalletVCWatcher {
   @Column({
     name: 'watcher_callback_url',
     type: 'varchar',
-    length: 500,
+    length: 1500,
     default: null,
   })
   watcherCallbackUrl: string;

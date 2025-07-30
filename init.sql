@@ -85,7 +85,7 @@ CREATE TABLE wallet_vc_watchers (
     provider VARCHAR(100),
     watcher_registered BOOLEAN DEFAULT FALSE,
     watcher_email VARCHAR(500),
-    watcher_callback_url VARCHAR(500),
+    watcher_callback_url VARCHAR(1500),
     forward_watcher_callback_url VARCHAR(1500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
