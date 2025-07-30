@@ -16,4 +16,8 @@ export class WatchVcDto {
   @IsOptional()
   @IsString()
   callbackUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  forwardWatcherCallbackUrl?: string;
 }

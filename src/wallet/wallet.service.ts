@@ -313,6 +313,26 @@ export class WalletService {
         };
       }
 
+      let forwardWatcherCallbackUrl = '';
+
+      // Check if the provided callback URL is external (not the wallet backend)
+      if (data.callbackUrl) {
+        const walletBackendUrl = process.env.WALLET_SERVICE_BASE_URL || '';
+        const isExternalUrl =
+          !walletBackendUrl || !data.callbackUrl.includes(walletBackendUrl);
+
+        if (isExternalUrl) {
+          forwardWatcherCallbackUrl = data.callbackUrl;
+          this.logger.log(
+            `Setting external forward callback URL: ${data.callbackUrl}`,
+            'WalletService.watchVC',
+          );
+        }
+      }
+
+      // Set callback URL to the wallet backend service URL
+      data.callbackUrl = `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`;
+
       // Call the adapter to register watcher
       const result = await this.walletAdapter.watchVC!(data);
 
@@ -321,7 +341,7 @@ export class WalletService {
         try {
           const provider = this.getProviderName();
           const watcherEmail = result.data?.watcherEmail || '';
-          const watcherCallbackUrl = result.data?.watcherCallbackUrl || '';
+          const watcherCallbackUrl = data.callbackUrl;
 
           // First check if watcher exists with the specific combination
           const existingWatcher =
@@ -346,6 +366,7 @@ export class WalletService {
               watcherEmail,
               watcherCallbackUrl,
               user.id, // createdBy
+              forwardWatcherCallbackUrl || '', // forward callback URL (undefined if not external)
             );
           }
 
@@ -357,7 +378,6 @@ export class WalletService {
               provider,
               watcherEmail,
               true,
-              watcherCallbackUrl,
               user.id, // updatedBy
             );
 
@@ -460,22 +480,26 @@ export class WalletService {
 
       // Process each watcher record
       for (const watcher of watchers) {
-        const hasCallbackUrl = watcher.watcherCallbackUrl?.trim();
-        const isExternalUrl =
-          hasCallbackUrl &&
-          (!walletBackendUrl || !hasCallbackUrl.includes(walletBackendUrl));
+        // Use forwardWatcherCallbackUrl if set, otherwise fall back to watcherCallbackUrl
+        const callbackUrl =
+          watcher.forwardWatcherCallbackUrl?.trim() ||
+          watcher.watcherCallbackUrl?.trim();
 
-        if (!hasCallbackUrl) {
+        if (!callbackUrl) {
           this.logger.log(
-            `No watcher callback URL set for watcher: ${watcher.id}`,
+            `No callback URL set for watcher: ${watcher.id}`,
             'WalletService.processWatchCallback',
           );
           continue;
         }
 
+        // Check if it's an external URL (not the wallet backend)
+        const isExternalUrl =
+          !walletBackendUrl || !callbackUrl.includes(walletBackendUrl);
+
         if (!isExternalUrl) {
           this.logger.log(
-            `Skipping callback forwarding to wallet backend URL: ${watcher.watcherCallbackUrl}`,
+            `Skipping callback forwarding to wallet backend URL: ${callbackUrl}`,
             'WalletService.processWatchCallback',
           );
           continue;
@@ -484,7 +508,7 @@ export class WalletService {
         try {
           // Forward the callback data to the external URL
           const response = await this.forwardCallbackToExternalUrl(
-            watcher.watcherCallbackUrl,
+            callbackUrl,
             data,
           );
 
@@ -551,6 +575,22 @@ export class WalletService {
     data: WatchCallbackDto,
   ): Promise<{ success: boolean; statusCode: number; message: string }> {
     try {
+      // Validate URL format
+      try {
+        new URL(callbackUrl);
+      } catch (e) {
+        this.logger.logError(
+          `Invalid callback URL format: ${callbackUrl}`,
+          e,
+          'WalletService.forwardCallbackToExternalUrl',
+        );
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Invalid callback URL format',
+        };
+      }
+
       const response = await axios.post(callbackUrl, data, {
         headers: {
           'Content-Type': 'application/json',

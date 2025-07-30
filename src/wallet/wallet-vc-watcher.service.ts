@@ -19,6 +19,7 @@ export class WalletVCWatcherService {
     watcherEmail: string,
     watcherCallbackUrl: string,
     createdBy: string = '',
+    forwardWatcherCallbackUrl?: string,
   ): Promise<WalletVCWatcher> {
     try {
       // Check if a watcher already exists for this combination
@@ -52,6 +53,7 @@ export class WalletVCWatcherService {
         watcherRegistered: false,
         watcherEmail,
         watcherCallbackUrl,
+        forwardWatcherCallbackUrl,
         createdBy,
       });
 
@@ -72,7 +74,6 @@ export class WalletVCWatcherService {
     provider: string,
     watcherEmail: string,
     watcherRegistered: boolean,
-    watcherCallbackUrl: string,
     updatedBy: string = '',
   ): Promise<{ success: boolean; message: string }> {
     try {
@@ -105,7 +106,7 @@ export class WalletVCWatcherService {
         };
       }
 
-      // Update watcher status
+      // Update only watcher status
       const updateWhereCondition: Partial<{
         vcPublicId: string;
         userId: string | null;
@@ -118,7 +119,6 @@ export class WalletVCWatcherService {
 
       await this.walletVCWatcherRepository.update(updateWhereCondition as any, {
         watcherRegistered,
-        watcherCallbackUrl,
         updatedBy,
       });
 

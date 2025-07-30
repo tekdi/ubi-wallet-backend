@@ -32,8 +32,6 @@ CREATE TABLE users (
 CREATE INDEX idx_users_account_id ON users(account_id);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_status ON users(status);
-CREATE INDEX idx_users_blocked ON users(blocked);
 CREATE INDEX idx_users_token ON users(token);
 
 -- Comments for users table
@@ -63,10 +61,7 @@ CREATE TABLE wallet_vcs (
 
 -- Indexes for wallet_vcs table
 CREATE INDEX idx_wallet_vcs_vc_public_id ON wallet_vcs(vc_public_id);
-CREATE INDEX idx_wallet_vcs_provider ON wallet_vcs(provider);
 CREATE INDEX idx_wallet_vcs_user_id ON wallet_vcs(user_id);
-CREATE INDEX idx_wallet_vcs_created_by ON wallet_vcs(created_by);
-CREATE INDEX idx_wallet_vcs_updated_by ON wallet_vcs(updated_by);
 
 -- Unique constraint to prevent duplicate VCs for the same user and provider
 CREATE UNIQUE INDEX idx_wallet_vcs_unique_user_provider
@@ -91,6 +86,7 @@ CREATE TABLE wallet_vc_watchers (
     watcher_registered BOOLEAN DEFAULT FALSE,
     watcher_email VARCHAR(500),
     watcher_callback_url VARCHAR(500),
+    forward_watcher_callback_url VARCHAR(1500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by UUID,
@@ -100,10 +96,6 @@ CREATE TABLE wallet_vc_watchers (
 -- Indexes for wallet_vc_watchers table
 CREATE INDEX idx_wallet_vc_watchers_vc_public_id ON wallet_vc_watchers(vc_public_id);
 CREATE INDEX idx_wallet_vc_watchers_user_id ON wallet_vc_watchers(user_id);
-CREATE INDEX idx_wallet_vc_watchers_provider ON wallet_vc_watchers(provider);
-CREATE INDEX idx_wallet_vc_watchers_watcher_registered ON wallet_vc_watchers(watcher_registered);
-CREATE INDEX idx_wallet_vc_watchers_created_by ON wallet_vc_watchers(created_by);
-CREATE INDEX idx_wallet_vc_watchers_updated_by ON wallet_vc_watchers(updated_by);
 
 -- Unique constraint to prevent duplicate watchers for the same VC, user, and email
 CREATE UNIQUE INDEX idx_wallet_vc_watchers_unique
@@ -117,6 +109,7 @@ COMMENT ON COLUMN wallet_vc_watchers.provider IS 'Wallet provider name (e.g., dh
 COMMENT ON COLUMN wallet_vc_watchers.watcher_registered IS 'Whether the watcher is registered with the external service';
 COMMENT ON COLUMN wallet_vc_watchers.watcher_email IS 'Email address for the watcher';
 COMMENT ON COLUMN wallet_vc_watchers.watcher_callback_url IS 'Callback URL for the watcher';
+COMMENT ON COLUMN wallet_vc_watchers.forward_watcher_callback_url IS 'Optional forward callback URL for external service notifications';
 COMMENT ON COLUMN wallet_vc_watchers.created_by IS 'UUID of the user who created this watcher record';
 COMMENT ON COLUMN wallet_vc_watchers.updated_by IS 'UUID of the user who last updated this watcher record';
 
