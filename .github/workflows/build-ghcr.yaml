@@ -12,20 +12,11 @@ jobs:
   build_and_push:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: UBA-DEV
+    environment: GHCR_BUILD
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Validate GHCR_PAT_TOKEN is set
-        run: |
-          if [ -z "${{ secrets.GHCR_PAT_TOKEN }}" ]; then
-            echo "❌ GHCR_PAT_TOKEN is empty or missing!"
-            exit 1
-          else
-            echo "✅ GHCR_PAT_TOKEN is set."
-          fi
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_PAT_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
