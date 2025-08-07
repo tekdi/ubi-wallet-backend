@@ -249,6 +249,7 @@ export class WalletService {
               providerName,
               user?.id || '',
               user?.id || '', // Use user UUID for createdBy
+              uploadResult.data?.vcJson,
             );
 
             this.logger.log(
@@ -633,5 +634,26 @@ export class WalletService {
         };
       }
     }
+  }
+
+  async getVCJsonByVcIdentifier(
+    userId: string,
+    vcIdentifier: string,
+    token: string,
+  ) {
+    // Check if the adapter supports this method
+    if (!this.walletAdapter.getVCJsonByVcIdentifier) {
+      return {
+        success: false,
+        message: 'VC JSON retrieval not supported by this wallet provider',
+        statusCode: 501,
+      };
+    }
+
+    return await this.walletAdapter.getVCJsonByVcIdentifier(
+      userId,
+      vcIdentifier,
+      token,
+    );
   }
 }

@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import axios from 'axios';
 import {
   IWalletAdapterWithOtp,
@@ -18,6 +20,7 @@ import {
 } from './interfaces/wallet-adapter.interface';
 import { LoggerService } from '../common/logger/logger.service';
 import { UserService } from '../users/user.service';
+import { WalletVC } from '../wallet/wallet-vc.entity';
 
 interface ApiResponse {
   accountId?: string;
@@ -65,6 +68,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
   constructor(
     private readonly logger: LoggerService,
     private readonly userService: UserService,
+    @InjectRepository(WalletVC)
+    private readonly walletVCRepository: Repository<WalletVC>,
   ) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
@@ -223,6 +228,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         let issuedAt = '';
         let vcName = '';
         let documentTitle = '';
+        let identifier = '';
 
         // If the credentialVC is a string, try to parse it as JSON to extract dates
         if (typeof cred.credentialVC === 'string') {
@@ -233,6 +239,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
               (typeof parsedVC?.credentialSchema?.title === 'string'
                 ? parsedVC.credentialSchema.title.split(':')[0]
                 : '') || 'Verifiable Credential';
+
+            identifier = parsedVC?.id || '';
 
             // Check if the parsed object has 'validFrom' and 'validUntil' fields
             if (
@@ -267,6 +275,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         // Return the formatted credential object
         return {
           id: cred.id,
+          identifier,
           name: vcName || 'Verifiable Credential',
           active: cred.active || false,
           issuedAt,
@@ -456,6 +465,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       // Parse the QR data to extract VC
       const parsedVC = await this.extractVCFromQR(qrData);
 
+      // get the vc json like       const response = await axios.get(`${qrData}.vc`, { timeout: 10000 });
+      const vcJsonResponse = await axios.get(`${qrData}.json`, {
+        timeout: 10000,
+      });
+      const vcJsonData = vcJsonResponse.data;
+
       // Format the message payload
       const messagePayload = this.formatMessagePayload({
         id: typeof parsedVC.id === 'string' ? parsedVC.id : 'generated-id',
@@ -531,6 +546,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         data: {
           status: 'success',
           vcId: messageData.messageId || 'vc-uploaded',
+          vcJson: vcJsonData,
         },
       };
     } catch (error: unknown) {
@@ -648,14 +664,14 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       return {
         statusCode,
         message,
-        data: {
-          watchId:
-            responseData.messageId ||
-            (isSuccess ? 'Watcher registered' : 'Watcher not registered'),
-          status: isSuccess ? 'success' : 'failed',
-          watcherEmail: data.email,
-          watcherCallbackUrl: data.callbackUrl,
-        },
+                    data: {
+              watchId:
+                responseData.messageId ||
+                (isSuccess ? 'Watcher registered' : 'Watcher not registered'),
+              status: isSuccess ? 'success' : 'failed',
+              watcherEmail: data.email || '',
+              watcherCallbackUrl: data.callbackUrl || '',
+            },
       };
     } catch (error: unknown) {
       // Handle axios errors to preserve HTTP status codes
@@ -678,8 +694,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
                   ? 'Watcher already exists'
                   : 'Watcher not registered'),
               status: isSuccess ? 'success' : 'failed',
-              watcherEmail: data.email,
-              watcherCallbackUrl: data.callbackUrl,
+              watcherEmail: data.email || '',
+              watcherCallbackUrl: data.callbackUrl || '',
             },
           };
         }
@@ -692,6 +708,94 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       return {
         statusCode: 500,
         message: 'Failed to register VC watch',
+      };
+    }
+  }
+
+  async getVCJsonByVcIdentifier(
+    userId: string,
+    vcIdentifier: string,
+    token: string,
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    message: string;
+    statusCode: number;
+  }> {
+    try {
+      // Get user by username to get the actual user ID
+      const user = await this.userService.findByUsername(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: `User not found with username: ${userId}`,
+          statusCode: 404,
+        };
+      }
+
+      // Get the VC from the database using the user ID directly from the database
+      const walletVCs = await this.walletVCRepository.find({
+        where: {
+          userId: user.id,
+          provider: 'dhiway',
+        },
+      });
+
+      if (!walletVCs.length) {
+        return {
+          success: false,
+          message: `VC not found for user: ${userId}, vcIdentifier: ${vcIdentifier}`,
+          statusCode: 404,
+        };
+      }
+
+      const walletVcJsons = await Promise.all(
+        walletVCs.map(async (walletVC) => {
+          if (!walletVC?.vcJson) return null;
+          try {
+            const vcJson = JSON.parse(walletVC.vcJson);
+            return vcJson;
+          } catch (error) {
+            console.log('Error parsing VC JSON:', error);
+            return null;
+          }
+        }),
+      );
+
+      const walletVcJsonsFiltered = walletVcJsons.filter((walletVC) => {
+        return walletVC?.details?.vc?.id === vcIdentifier;
+      });
+
+      return {
+        success: true,
+        data: walletVcJsonsFiltered[0],
+        message: 'VC JSON retrieved successfully from database',
+        statusCode: 200,
+      };
+    } catch (error: unknown) {
+      this.logger.logError(
+        'Failed to get VC JSON by identifier from Dhiway',
+        error,
+        'DhiwayAdapter.getVCJsonByVcIdentifier',
+      );
+
+      // Handle axios errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        if (axiosError.response) {
+          const statusCode = axiosError.response.status;
+          return {
+            success: false,
+            message: `Failed to retrieve VC JSON (HTTP ${statusCode})`,
+            statusCode,
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: 'Failed to retrieve VC JSON from Dhiway',
+        statusCode: 500,
       };
     }
   }

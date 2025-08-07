@@ -14,6 +14,9 @@ export class WalletVC {
   @Column({ name: 'vc_public_id', type: 'varchar', length: 255 })
   vcPublicId: string;
 
+  @Column({ name: 'vc_json', type: 'text', nullable: true })
+  vcJson: string;
+
   @Column({ type: 'varchar', length: 100 })
   provider: string;
 
