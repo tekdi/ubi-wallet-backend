@@ -69,10 +69,12 @@ export class HousekeepingController {
       throw new UnauthorizedException('Invalid or missing secret key');
     }
 
-    const chunkSizeNumber = chunkSize ? parseInt(chunkSize, 10) : 100;
+    const chunkSizeNumber = chunkSize
+      ? Math.max(1, parseInt(chunkSize, 10) || 100)
+      : 100;
 
     this.logger.log(
-      `HTTP request to add watchers with chunk size: ${chunkSizeNumber}`,
+      `HTTP request to add watchers with chunk size: ${Math.max(1, Math.min(1000, chunkSizeNumber))}`,
       'HousekeepingController.addWatchersForMissingWalletVCs',
     );
 
@@ -145,7 +147,9 @@ export class HousekeepingController {
     }
 
     const providerName = provider || 'dhiway';
-    const chunkSizeNumber = chunkSize ? parseInt(chunkSize, 10) : 100;
+    const chunkSizeNumber = chunkSize
+      ? Math.max(1, parseInt(chunkSize, 10) || 100)
+      : 100;
 
     this.logger.log(
       `HTTP request to sync VCs and add watchers (provider: ${providerName}, chunk size: ${chunkSizeNumber})`,
