@@ -94,6 +94,7 @@ export interface UploadResponse {
   data?: {
     status: string;
     vcId: string;
+    vcJson?: string;
   };
 }
 
@@ -131,6 +132,16 @@ export interface IWalletAdapter {
     token: string,
   ): Promise<UploadResponse>;
   watchVC?(data: WatchVcDto): Promise<WatchVcResponse>;
+  getVCJsonByVcIdentifier?(
+    userId: string,
+    vcIdentifier: string,
+    token: string,
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    message: string;
+    statusCode: number;
+  }>;
 }
 
 export interface IWalletAdapterWithOtp extends IWalletAdapter {

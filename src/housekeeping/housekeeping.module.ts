@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HousekeepingService } from './housekeeping.service';
+import { HousekeepingController } from './housekeeping.controller';
 import { WalletVC } from '../wallet/wallet-vc.entity';
 import { WalletVCWatcher } from '../wallet/wallet-vc-watcher.entity';
 import { User } from '../users/user.entity';
@@ -13,6 +14,7 @@ import { LoggerModule } from '../common/logger/logger.module';
     UserModule,
     LoggerModule,
   ],
+  controllers: [HousekeepingController],
   providers: [HousekeepingService],
   exports: [HousekeepingService],
 })

@@ -17,6 +17,7 @@ export class WalletVCService {
     provider: string,
     userId: string,
     createdBy: string = '',
+    vcJson?: string,
   ): Promise<WalletVC> {
     try {
       // Check if a record already exists for this combination
@@ -26,9 +27,24 @@ export class WalletVCService {
 
       if (existingVC) {
         this.logger.log(
-          `Wallet VC record already exists for vcPublicId: ${vcPublicId}, provider: ${provider}, userId: ${userId}`,
+          `Wallet VC record already exists for vcPublicId: ${vcPublicId}, provider: ${provider}, userId: ${userId}. Updating VC JSON.`,
           'WalletVCService.createWalletVC',
         );
+
+        // Update the VC JSON if provided
+        if (vcJson !== undefined) {
+          existingVC.vcJson = vcJson;
+          existingVC.updatedBy = createdBy;
+          existingVC.updatedAt = new Date();
+
+          const updatedVC = await this.walletVCRepository.save(existingVC);
+          this.logger.log(
+            `VC JSON updated for existing record: ${vcPublicId}`,
+            'WalletVCService.createWalletVC',
+          );
+          return updatedVC;
+        }
+
         return existingVC;
       }
 
@@ -38,6 +54,7 @@ export class WalletVCService {
         provider,
         userId,
         createdBy,
+        vcJson,
       });
 
       return await this.walletVCRepository.save(walletVC);
