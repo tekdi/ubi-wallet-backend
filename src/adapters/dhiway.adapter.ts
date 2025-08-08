@@ -664,14 +664,14 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       return {
         statusCode,
         message,
-                    data: {
-              watchId:
-                responseData.messageId ||
-                (isSuccess ? 'Watcher registered' : 'Watcher not registered'),
-              status: isSuccess ? 'success' : 'failed',
-              watcherEmail: data.email || '',
-              watcherCallbackUrl: data.callbackUrl || '',
-            },
+        data: {
+          watchId:
+            responseData.messageId ||
+            (isSuccess ? 'Watcher registered' : 'Watcher not registered'),
+          status: isSuccess ? 'success' : 'failed',
+          watcherEmail: data.email || '',
+          watcherCallbackUrl: data.callbackUrl || '',
+        },
       };
     } catch (error: unknown) {
       // Handle axios errors to preserve HTTP status codes
