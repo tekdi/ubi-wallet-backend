@@ -51,6 +51,7 @@ COMMENT ON COLUMN users.blocked IS 'Whether the user account is blocked';
 CREATE TABLE wallet_vcs (
     id SERIAL PRIMARY KEY,
     vc_public_id VARCHAR(255) NOT NULL,
+    vc_json TEXT,
     provider VARCHAR(100) NOT NULL,
     user_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,6 +71,7 @@ ON wallet_vcs(vc_public_id, provider, user_id);
 -- Comments for wallet_vcs table
 COMMENT ON TABLE wallet_vcs IS 'Stores wallet VC records without watcher information (watchers are now in wallet_vc_watchers table)';
 COMMENT ON COLUMN wallet_vcs.vc_public_id IS 'Public ID of the wallet VC';
+COMMENT ON COLUMN wallet_vcs.vc_json IS 'JSON representation of the Verifiable Credential';
 COMMENT ON COLUMN wallet_vcs.provider IS 'Wallet provider name (e.g., dhiway)';
 COMMENT ON COLUMN wallet_vcs.user_id IS 'UUID of the user who owns this wallet VC';
 COMMENT ON COLUMN wallet_vcs.created_by IS 'UUID of the user who created this wallet VC record';

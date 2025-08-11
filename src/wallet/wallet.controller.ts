@@ -87,6 +87,20 @@ export class WalletController {
     return await this.walletService.watchVC(data, token);
   }
 
+  @Get(':user_id/vc_json/:vcIdentifier')
+  @UseGuards(AuthGuard)
+  async getVCJsonByVcIdentifier(
+    @Param('user_id') user_id: string,
+    @Param('vcIdentifier') vcIdentifier: string,
+    @CurrentToken() token: string,
+  ) {
+    return await this.walletService.getVCJsonByVcIdentifier(
+      user_id,
+      vcIdentifier,
+      token,
+    );
+  }
+
   @Post('vcs/watch/callback')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   watchCallback(@Body() data: WatchCallbackDto) {
