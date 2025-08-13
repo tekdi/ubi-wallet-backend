@@ -401,6 +401,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     document,
     vc,
     detailsMeta = '',
+    details = { publicId: '' },
     detailsDocumentTitle = '',
     detailsUser = 'custom',
     type = 'document',
@@ -411,6 +412,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     document: string;
     vc: Record<string, unknown>;
     detailsMeta?: string;
+    details?: {
+      publicId: string;
+    };
     detailsDocumentTitle?: string;
     detailsUser?: string;
     type?: string;
@@ -427,6 +431,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         meta: detailsMeta,
         documentTitle: detailsDocumentTitle,
         user: detailsUser,
+        publicId: details.publicId,
       },
       type,
     };
@@ -479,6 +484,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         document: 'string',
         vc: parsedVC,
         detailsMeta: 'string',
+        details: {
+          publicId: vcJsonData.publicId as string,
+        },
         detailsDocumentTitle:
           typeof parsedVC.credentialSubject === 'object' &&
           parsedVC.credentialSubject &&
@@ -516,12 +524,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         return false;
       });
 
-      if (existingCredential) {
-        return {
-          statusCode: 409,
-          message: 'This verifiable credential is already added to your wallet',
-        };
-      }
+      // if (existingCredential) {
+      //   return {
+      //     statusCode: 409,
+      //     message: 'This verifiable credential is already added to your wallet',
+      //   };
+      // }
 
       // Create a message with the VC
       const messageResponse = await axios.post(
