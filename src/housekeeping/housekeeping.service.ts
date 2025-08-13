@@ -289,19 +289,26 @@ export class HousekeepingService {
 
       const adapter = await this.createAdapter(provider);
       const totalUsers = await this.userRepository.count();
-      
+
       this.logger.log(
         `Found ${totalUsers} total users to process`,
         'HousekeepingService.syncVCsAndAddWatchersForAllUsers',
       );
 
-      const stats = await this.processAllUsers(adapter, totalUsers, chunkSize, provider);
+      const stats = await this.processAllUsers(
+        adapter,
+        totalUsers,
+        chunkSize,
+        provider,
+      );
 
       const message = this.createCompletionMessage(stats);
-      this.logger.log(message, 'HousekeepingService.syncVCsAndAddWatchersForAllUsers');
+      this.logger.log(
+        message,
+        'HousekeepingService.syncVCsAndAddWatchersForAllUsers',
+      );
 
       return { success: true, message, stats };
-
     } catch (error) {
       return this.handleSyncError(error);
     }
@@ -310,7 +317,11 @@ export class HousekeepingService {
   private async createAdapter(provider: string) {
     const { getAdapterBasedOnEnv } = await import('../adapters/adapter.factory');
     const AdapterClass = getAdapterBasedOnEnv(provider);
-    return new AdapterClass(this.logger, this.userService, this.walletVCRepository);
+    return new AdapterClass(
+      this.logger,
+      this.userService,
+      this.walletVCRepository,
+    );
   }
 
   private async processAllUsers(
@@ -326,7 +337,7 @@ export class HousekeepingService {
       const usersChunk = await this.getUserChunk(offset, chunkSize);
       await this.processUserChunk(usersChunk, adapter, stats, provider);
       offset += chunkSize;
-      
+
       this.logProgress(offset, totalUsers);
     }
 
@@ -370,7 +381,12 @@ export class HousekeepingService {
     }
   }
 
-  private async processUser(user: any, adapter: any, stats: any, provider: string) {
+  private async processUser(
+    user: any,
+    adapter: any,
+    stats: any,
+    provider: string,
+  ) {
     try {
       this.logger.log(
         `Processing user: ${user.email} (ID: ${user.id})`,
@@ -378,7 +394,10 @@ export class HousekeepingService {
       );
 
       if (!user.token) {
-        this.logger.log(`No token found for user: ${user.email}`, 'HousekeepingService.processUser');
+        this.logger.log(
+          `No token found for user: ${user.email}`,
+          'HousekeepingService.processUser',
+        );
         return;
       }
 
@@ -409,10 +428,10 @@ export class HousekeepingService {
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000)),
       ]);
 
-      if (!vcListResponse.success || vcListResponse.statusCode !== 200) {
+      if (vcListResponse.statusCode !== 200) {
         this.logger.logError(
-          `Failed to get VCs from provider for user: ${user.email}`,
-          new Error(vcListResponse.message || 'Provider API error'),
+          `Failed to get VCs from provider for user: ${user.email}. Status: ${vcListResponse.statusCode}, Message: ${vcListResponse.message}`,
+          new Error(`Provider API error: ${vcListResponse.message || 'Unknown error'}`),
           'HousekeepingService.getVCsFromProvider',
         );
         return null;
@@ -513,7 +532,7 @@ export class HousekeepingService {
       provider: provider,
       watcherRegistered: false,
       watcherEmail: user.email || '',
-      watcherCallbackUrl: '',
+      watcherCallbackUrl: `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`,
       createdBy: user.id,
       updatedBy: user.id,
     });
