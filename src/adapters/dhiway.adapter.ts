@@ -39,6 +39,7 @@ interface ApiResponse {
     credentialSubject?: Record<string, unknown>;
   }>;
   messageId?: string;
+  success?: boolean;
 }
 
 interface ErrorWithMessage {
@@ -871,8 +872,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${data.recordPublicId}.vc`,
           { timeout: 10000 },
         );
+
         vcContent = vcResponse?.data as Record<string, unknown>;
-        
+
         if (!vcContent) {
           return {
             success: false,
@@ -920,14 +922,55 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
         messagePayload,
         {
-          headers: this.getAuthHeaders(user.token),
+          headers: this.getAuthHeaders(this.apiKey),
         },
       );
 
       const messageData = messageResponse.data as ApiResponse;
 
+      // Check if the message creation was successful
+      if (messageData.success !== true) {
+        return {
+          success: false,
+          message: 'Failed to create/update VC message on Dhiway wallet',
+          statusCode: 500,
+          data: messageData,
+        };
+      }
+
+      // Update vc_json in wallet_vc table for the publicVcId
+      try {
+        const existingVC = await this.walletVCRepository.findOne({
+          where: { vcPublicId: data.recordPublicId, userId: user.id },
+        });
+
+        if (existingVC) {
+          // Update the existing VC record with new vc_json
+          existingVC.vcJson = JSON.stringify(vcContent);
+          existingVC.updatedBy = user.id;
+          await this.walletVCRepository.save(existingVC);
+
+          this.logger.log(
+            `Updated vc_json in wallet_vc table for VC: ${data.recordPublicId}`,
+            'DhiwayAdapter.processCallback',
+          );
+        } else {
+          this.logger.log(
+            `no record found to update vc_json in wallet_vc table for VC: ${data.recordPublicId}`,
+            'DhiwayAdapter.processCallback',
+          );
+        }
+      } catch (dbError) {
+        this.logger.logError(
+          `Failed to update vc_json in wallet_vc table for VC: ${data.recordPublicId}`,
+          dbError,
+          'DhiwayAdapter.processCallback',
+        );
+        // Continue with the process even if database update fails
+      }
+
       this.logger.log(
-        `Successfully processed callback for VC: ${data.recordPublicId}. Message ID: ${messageData.messageId}`,
+        `Successfully processed callback for VC: ${data.recordPublicId}. Message ID: ${messageData.messageId || 'N/A'}`,
         'DhiwayAdapter.processCallback',
       );
 
@@ -939,9 +982,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           messageId: messageData.messageId,
           vcPublicId: data.recordPublicId,
           updatedAt: new Date().toISOString(),
+          databaseUpdated: true,
         },
       };
-
     } catch (error: unknown) {
       // Handle axios errors to preserve HTTP status codes
       if (error && typeof error === 'object' && 'response' in error) {
