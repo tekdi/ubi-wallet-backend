@@ -1035,7 +1035,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     }
   }
 
-  private createSuccessResponse(recordPublicId: string, messageData: any): {
+  private createSuccessResponse(
+    recordPublicId: string,
+    messageData: any,
+  ): {
     success: boolean;
     message: string;
     statusCode: number;
@@ -1093,7 +1096,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
   private handleWalletUpdateError(error: unknown): {
     success: boolean;
-    error: { success: boolean; message: string; statusCode: number; data?: any };
+    error: {
+      success: boolean;
+      message: string;
+      statusCode: number;
+      data?: any;
+    };
   } {
     if (error && typeof error === 'object' && 'response' in error) {
       const axiosError = error as any;
