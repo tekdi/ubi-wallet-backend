@@ -21,6 +21,7 @@ import {
 import { LoggerService } from '../common/logger/logger.service';
 import { UserService } from '../users/user.service';
 import { WalletVC } from '../wallet/wallet-vc.entity';
+import { WalletVCWatcher } from '../wallet/wallet-vc-watcher.entity';
 
 interface ApiResponse {
   accountId?: string;
@@ -38,6 +39,7 @@ interface ApiResponse {
     credentialSubject?: Record<string, unknown>;
   }>;
   messageId?: string;
+  success?: boolean;
 }
 
 interface ErrorWithMessage {
@@ -70,6 +72,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     private readonly userService: UserService,
     @InjectRepository(WalletVC)
     private readonly walletVCRepository: Repository<WalletVC>,
+    @InjectRepository(WalletVCWatcher)
+    private readonly walletVCWatcherRepository: Repository<WalletVCWatcher>,
   ) {
     this.dhiwayBaseUrl = process.env.DHIWAY_API_BASE || '';
     this.apiKey = process.env.DHIWAY_API_KEY || '';
@@ -401,6 +405,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     document,
     vc,
     detailsMeta = '',
+    details = { publicId: '' },
     detailsDocumentTitle = '',
     detailsUser = 'custom',
     type = 'document',
@@ -411,6 +416,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     document: string;
     vc: Record<string, unknown>;
     detailsMeta?: string;
+    details?: {
+      publicId: string;
+    };
     detailsDocumentTitle?: string;
     detailsUser?: string;
     type?: string;
@@ -427,6 +435,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         meta: detailsMeta,
         documentTitle: detailsDocumentTitle,
         user: detailsUser,
+        publicId: details.publicId,
       },
       type,
     };
@@ -479,6 +488,9 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         document: 'string',
         vc: parsedVC,
         detailsMeta: 'string',
+        details: {
+          publicId: vcJsonData.publicId as string,
+        },
         detailsDocumentTitle:
           typeof parsedVC.credentialSubject === 'object' &&
           parsedVC.credentialSubject &&
@@ -490,38 +502,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         detailsUser: 'custom',
         type: 'document',
       });
-
-      // Check if VC already exists in wallet
-      const credentialsResponse = await axios.get(
-        `${this.dhiwayBaseUrl}/api/v1/cred`,
-        {
-          headers: this.getAuthHeaders(token),
-        },
-      );
-
-      const credentialsData = credentialsResponse.data as Credential[];
-
-      // Check if a credential with same ID already exists
-      const existingCredential = credentialsData.find((cred) => {
-        if (typeof cred.credentialVC === 'string') {
-          try {
-            const parsedCred = JSON.parse(cred.credentialVC);
-            return parsedCred.id === parsedVC.id;
-          } catch {
-            return false;
-          }
-        } else if (cred.credentialVC && typeof cred.credentialVC === 'object') {
-          return cred.credentialVC.id === parsedVC.id;
-        }
-        return false;
-      });
-
-      if (existingCredential) {
-        return {
-          statusCode: 409,
-          message: 'This verifiable credential is already added to your wallet',
-        };
-      }
 
       // Create a message with the VC
       const messageResponse = await axios.post(
@@ -798,5 +778,348 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         statusCode: 500,
       };
     }
+  }
+
+  async processCallback(data: any): Promise<{
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data?: any;
+  }> {
+    try {
+      this.logger.log(
+        `Processing callback for VC: ${data.recordPublicId}`,
+        'DhiwayAdapter.processCallback',
+      );
+
+      // Validate input
+      const validationResult = this.validateCallbackData(data);
+      if (!validationResult.isValid) {
+        return validationResult.error!;
+      }
+
+      // Get watcher record and user
+      const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId);
+      if (!watcherAndUser.success) {
+        return watcherAndUser.error!;
+      }
+
+      const { user } = watcherAndUser.data!;
+
+      // Get VC content
+      const vcContentResult = await this.getVCContent(data.recordPublicId);
+      if (!vcContentResult.success) {
+        return vcContentResult.error!;
+      }
+
+      const vcContent = vcContentResult.data!;
+
+      // Update VC in Dhiway wallet
+      const walletUpdateResult = await this.updateVCInWallet(
+        vcContent,
+        data.recordPublicId,
+        user,
+      );
+      if (!walletUpdateResult.success) {
+        return walletUpdateResult.error!;
+      }
+
+      // Update database
+      await this.updateDatabaseVC(data.recordPublicId, user.id, vcContent);
+
+      // Return success response
+      return this.createSuccessResponse(data.recordPublicId, walletUpdateResult.data);
+    } catch (error: unknown) {
+      return this.handleCallbackError(error);
+    }
+  }
+
+  private validateCallbackData(data: any): {
+    isValid: boolean;
+    error?: { success: boolean; message: string; statusCode: number; data?: any };
+  } {
+    if (!data.recordPublicId) {
+      return {
+        isValid: false,
+        error: {
+          success: false,
+          message: 'recordPublicId is required',
+          statusCode: 400,
+        },
+      };
+    }
+    return { isValid: true };
+  }
+
+  private async getWatcherAndUser(recordPublicId: string): Promise<{
+    success: boolean;
+    data?: { user: any };
+    error?: { success: boolean; message: string; statusCode: number; data?: any };
+  }> {
+    const watcherRecord = await this.walletVCWatcherRepository.findOne({
+      where: { vcPublicId: recordPublicId },
+    });
+
+    if (!watcherRecord) {
+      return {
+        success: false,
+        error: {
+          success: false,
+          message: 'No watcher record found for this VC',
+          statusCode: 404,
+        },
+      };
+    }
+
+    if (!watcherRecord.userId) {
+      return {
+        success: false,
+        error: {
+          success: false,
+          message: 'No user ID associated with this watcher',
+          statusCode: 400,
+        },
+      };
+    }
+
+    const user = await this.userService.findById(watcherRecord.userId);
+    if (!user?.did || !user?.token) {
+      return {
+        success: false,
+        error: {
+          success: false,
+          message: 'User not found, DID not available, or no token',
+          statusCode: 404,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: { user },
+    };
+  }
+
+  private async getVCContent(recordPublicId: string): Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    error?: { success: boolean; message: string; statusCode: number; data?: any };
+  }> {
+    try {
+      const vcResponse = await axios.get(
+        `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${recordPublicId}.vc`,
+        { timeout: 10000 },
+      );
+
+      const vcContent = vcResponse?.data as Record<string, unknown>;
+      if (!vcContent) {
+        return {
+          success: false,
+          error: {
+            success: false,
+            message: 'No verifiable credential content found',
+            statusCode: 404,
+          },
+        };
+      }
+
+      return { success: true, data: vcContent };
+    } catch (error) {
+      this.logger.error(
+        'Failed to fetch VC content: ' +
+          (error instanceof Error ? error.message : 'Unknown error'),
+      );
+      return {
+        success: false,
+        error: {
+          success: false,
+          message: 'Failed to fetch verifiable credential content',
+          statusCode: 500,
+        },
+      };
+    }
+  }
+
+  private async updateVCInWallet(
+    vcContent: Record<string, unknown>,
+    recordPublicId: string,
+    user: any,
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    error?: { success: boolean; message: string; statusCode: number; data?: any };
+  }> {
+    const messagePayload = this.formatMessagePayload({
+      id: typeof vcContent.id === 'string' ? vcContent.id : `vc-${recordPublicId}`,
+      fromDid: user.did,
+      toDid: user.did,
+      document: 'string',
+      vc: vcContent,
+      detailsMeta: 'string',
+      details: { publicId: recordPublicId },
+      detailsDocumentTitle: this.extractDocumentTitle(vcContent),
+      detailsUser: 'custom',
+      type: 'document',
+    });
+
+    try {
+      const messageResponse = await axios.post(
+        `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
+        messagePayload,
+        { headers: this.getAuthHeaders(this.apiKey) },
+      );
+
+      const messageData = messageResponse.data as ApiResponse;
+      if (messageData.success !== true) {
+        return {
+          success: false,
+          error: {
+            success: false,
+            message: 'Failed to create/update VC message on Dhiway wallet',
+            statusCode: 500,
+            data: messageData,
+          },
+        };
+      }
+
+      return { success: true, data: messageData };
+    } catch (error) {
+      return this.handleWalletUpdateError(error);
+    }
+  }
+
+  private extractDocumentTitle(vcContent: Record<string, unknown>): string {
+    if (
+      typeof vcContent.credentialSubject === 'object' &&
+      vcContent.credentialSubject &&
+      'name' in vcContent.credentialSubject
+    ) {
+      return String(
+        (vcContent.credentialSubject as Record<string, unknown>).name,
+      );
+    }
+    return 'Verifiable Credential';
+  }
+
+  private async updateDatabaseVC(
+    recordPublicId: string,
+    userId: string,
+    vcContent: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      const existingVC = await this.walletVCRepository.findOne({
+        where: { vcPublicId: recordPublicId, userId },
+      });
+
+      if (existingVC) {
+        existingVC.vcJson = JSON.stringify(vcContent);
+        existingVC.updatedBy = userId;
+        await this.walletVCRepository.save(existingVC);
+
+        this.logger.log(
+          `Updated vc_json in wallet_vc table for VC: ${recordPublicId}`,
+          'DhiwayAdapter.processCallback',
+        );
+      } else {
+        this.logger.log(
+          `No record found to update vc_json in wallet_vc table for VC: ${recordPublicId}`,
+          'DhiwayAdapter.processCallback',
+        );
+      }
+    } catch (dbError) {
+      this.logger.logError(
+        `Failed to update vc_json in wallet_vc table for VC: ${recordPublicId}`,
+        dbError,
+        'DhiwayAdapter.processCallback',
+      );
+    }
+  }
+
+  private createSuccessResponse(recordPublicId: string, messageData: any): {
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: any;
+  } {
+    this.logger.log(
+      `Successfully processed callback for VC: ${recordPublicId}. Message ID: ${messageData.messageId || 'N/A'}`,
+      'DhiwayAdapter.processCallback',
+    );
+
+    return {
+      success: true,
+      message: 'VC updated successfully in wallet',
+      statusCode: 200,
+      data: {
+        messageId: messageData.messageId,
+        vcPublicId: recordPublicId,
+        updatedAt: new Date().toISOString(),
+        databaseUpdated: true,
+      },
+    };
+  }
+
+  private handleCallbackError(error: unknown): {
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: any;
+  } {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any;
+      if (axiosError.response) {
+        const statusCode = axiosError.response.status;
+        const responseData = axiosError.response.data as ApiResponse;
+
+        return {
+          success: false,
+          message: `Failed to update VC in wallet (HTTP ${statusCode})`,
+          statusCode,
+          data: responseData,
+        };
+      }
+    }
+
+    const errorMessage = (error as ErrorWithMessage).message || 'Unknown error';
+    this.logger.error(errorMessage);
+
+    return {
+      success: false,
+      message: 'Failed to process callback and update VC',
+      statusCode: 500,
+      data: { error: errorMessage },
+    };
+  }
+
+  private handleWalletUpdateError(error: unknown): {
+    success: boolean;
+    error: { success: boolean; message: string; statusCode: number; data?: any };
+  } {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any;
+      if (axiosError.response) {
+        const statusCode = axiosError.response.status;
+        const responseData = axiosError.response.data as ApiResponse;
+
+        return {
+          success: false,
+          error: {
+            success: false,
+            message: `Failed to update VC in wallet (HTTP ${statusCode})`,
+            statusCode,
+            data: responseData,
+          },
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: {
+        success: false,
+        message: 'Failed to update VC in wallet',
+        statusCode: 500,
+      },
+    };
   }
 }

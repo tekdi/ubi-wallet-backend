@@ -142,6 +142,14 @@ export interface IWalletAdapter {
     message: string;
     statusCode: number;
   }>;
+  processCallback?(
+    data: any,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data?: any;
+  }>;
 }
 
 export interface IWalletAdapterWithOtp extends IWalletAdapter {

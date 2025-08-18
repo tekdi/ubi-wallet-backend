@@ -19,7 +19,7 @@ export class WatcherCronService {
     private readonly userService: UserService,
   ) {}
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_6_HOURS)
   async registerWatchersForVCs() {
     try {
       this.logger.log('Starting watcher registration cron job');
