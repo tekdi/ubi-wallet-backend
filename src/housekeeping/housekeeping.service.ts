@@ -444,25 +444,25 @@ export class HousekeepingService {
       );
 
       // Get complete VCs for each identifier
-      const completeVCs = [];
+      const completeVCs: any = [];
       for (const vcIdentifier of vcIdentifiers) {
         try {
-          const completeVC = await adapter.getVCbyidentifier(
+          const completeVC = await adapter.getVCJsonByVcIdentifier(
             vcIdentifier.identifier,
             user.token
           );
-          
-          if (completeVC && completeVC.success && completeVC.data) {
-            completeVCs.push(completeVC.data);
+          let completeVCData = completeVC.data;
+          if (completeVCData && typeof completeVCData === 'object') {
+            completeVCs.push(completeVCData);
           } else {
             this.logger.log(
-              `Failed to get complete VC for identifier: ${vcIdentifier.identifier || vcIdentifier.id || vcIdentifier}`,
+              `Failed to get complete VC for identifier: ${vcIdentifier.identifier}`,
               'HousekeepingService.getVCsFromProvider',
             );
           }
         } catch (vcError) {
           this.logger.log(
-            `Error getting complete VC for identifier: ${vcIdentifier.identifier || vcIdentifier.id || vcIdentifier}`,
+            `Error getting complete VC for identifier: ${vcIdentifier.identifier}`,
             'HousekeepingService.getVCsFromProvider',
           );
           // Continue with other VCs even if one fails
