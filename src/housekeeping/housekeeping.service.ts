@@ -513,12 +513,14 @@ export class HousekeepingService {
     });
 
     if (existingVC) {
+      console.log("existingVC===========", existingVC);
       stats.existingVCsFound++;
       this.logger.log(
         `VC already exists in database: ${vcFromProvider.publicId} for user: ${user.id}`,
         'HousekeepingService.handleVCExistence',
       );
     } else {
+      console.log("Newvc===========");
       await this.createNewVC(vcFromProvider, user, provider);
       stats.newVCsAdded++;
     }
