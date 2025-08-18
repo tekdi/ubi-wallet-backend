@@ -448,11 +448,12 @@ export class HousekeepingService {
       for (const vcIdentifier of vcIdentifiers) {
         try {
           const completeVC = await adapter.getVCJsonByVcIdentifier(
-            user.accountId,
+            user.username,
             vcIdentifier.identifier,
             user.token
           );
           let completeVCData = completeVC.data;
+          console.log("completeVCData", completeVCData);
           if (completeVCData && typeof completeVCData === 'object') {
             completeVCs.push(completeVCData);
           } else {
@@ -493,7 +494,7 @@ export class HousekeepingService {
       } catch (error) {
         stats.errors++;
         this.logger.logError(
-          `Error processing VC: ${vcFromProvider.id} for user: ${user.email}`,
+          `Error processing VC: ${vcFromProvider.publicId} for user: ${user.email}`,
           error,
           'HousekeepingService.processVCsForUser',
         );
