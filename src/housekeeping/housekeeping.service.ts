@@ -437,13 +437,44 @@ export class HousekeepingService {
         return null;
       }
 
-      const vcsFromProvider = vcListResponse.data || [];
+      const vcIdentifiers = vcListResponse.data || [];
       this.logger.log(
-        `Found ${vcsFromProvider.length} VCs from provider for user: ${user.email}`,
+        `Found ${vcIdentifiers.length} VC identifiers from provider for user: ${user.email}`,
         'HousekeepingService.getVCsFromProvider',
       );
 
-      return vcsFromProvider;
+      // Get complete VCs for each identifier
+      const completeVCs = [];
+      for (const vcIdentifier of vcIdentifiers) {
+        try {
+          const completeVC = await adapter.getVCbyidentifier(
+            vcIdentifier.identifier,
+            user.token
+          );
+          
+          if (completeVC && completeVC.success && completeVC.data) {
+            completeVCs.push(completeVC.data);
+          } else {
+            this.logger.log(
+              `Failed to get complete VC for identifier: ${vcIdentifier.identifier || vcIdentifier.id || vcIdentifier}`,
+              'HousekeepingService.getVCsFromProvider',
+            );
+          }
+        } catch (vcError) {
+          this.logger.log(
+            `Error getting complete VC for identifier: ${vcIdentifier.identifier || vcIdentifier.id || vcIdentifier}`,
+            'HousekeepingService.getVCsFromProvider',
+          );
+          // Continue with other VCs even if one fails
+        }
+      }
+
+      this.logger.log(
+        `Successfully retrieved ${completeVCs.length} complete VCs from provider for user: ${user.email}`,
+        'HousekeepingService.getVCsFromProvider',
+      );
+
+      return completeVCs;
     } catch (error) {
       this.logger.logError(
         `Error getting VCs from provider for user: ${user.email}`,
