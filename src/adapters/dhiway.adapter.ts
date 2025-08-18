@@ -720,7 +720,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           provider: 'dhiway',
         },
       });
-
+      console.log("walletVCs===", walletVCs);
       if (!walletVCs.length) {
         return {
           success: false,
@@ -741,11 +741,11 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           }
         }),
       );
-
+console.log("walletVcJsons===========", walletVcJsons);
       const walletVcJsonsFiltered = walletVcJsons.filter((walletVC) => {
         return walletVC?.details?.vc?.id === vcIdentifier;
       });
-
+console.log("walletVcJsonsFiltered=========", walletVcJsonsFiltered);
       return {
         success: true,
         data: walletVcJsonsFiltered[0],
