@@ -95,7 +95,7 @@ export class HousekeepingService {
                   userId: walletVC.userId,
                   provider: walletVC.provider,
                   watcherRegistered: false, // Will be registered by cron job
-                  watcherEmail: user.email || '',
+                  watcherEmail: `${process.env.WALLET_SERVICE_BASE_URL}` || '',
                   watcherCallbackUrl: '', // Can be set later if needed
                   createdBy: walletVC.userId, // Use the user's UUID
                   updatedBy: walletVC.userId, // Use the user's UUID
@@ -564,7 +564,7 @@ export class HousekeepingService {
       userId: user.id,
       provider: provider,
       watcherRegistered: false,
-      watcherEmail: user.email || '',
+      watcherEmail: `${process.env.WALLET_SERVICE_BASE_URL}` || '',
       watcherCallbackUrl: `${process.env.WALLET_SERVICE_BASE_URL}/api/wallet/vcs/watch/callback`,
       createdBy: user.id,
       updatedBy: user.id,
