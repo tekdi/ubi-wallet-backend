@@ -448,6 +448,7 @@ export class HousekeepingService {
       for (const vcIdentifier of vcIdentifiers) {
         try {
           const completeVC = await adapter.getVCJsonByVcIdentifier(
+            user.accountId,
             vcIdentifier.identifier,
             user.token
           );
