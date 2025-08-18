@@ -503,14 +503,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         type: 'document',
       });
 
-      // Check if VC already exists in wallet
-      const credentialsResponse = await axios.get(
-        `${this.dhiwayBaseUrl}/api/v1/cred`,
-        {
-          headers: this.getAuthHeaders(token),
-        },
-      );
-
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
