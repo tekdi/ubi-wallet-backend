@@ -105,7 +105,7 @@ export class HousekeepingService {
                 newWatchersCreated++;
 
                 this.logger.log(
-                  `Created new watcher for VC: ${walletVC.vcPublicId} with user: ${user.email}`,
+                  `Created new watcher for VC: ${walletVC.vcPublicId} with user: ${user.username}`,
                   'HousekeepingService.addWatchersForMissingWalletVCs',
                 );
               } else {
@@ -389,13 +389,13 @@ export class HousekeepingService {
   ) {
     try {
       this.logger.log(
-        `Processing user: ${user.email} (ID: ${user.id})`,
+        `Processing user: ${user.username} (ID: ${user.id})`,
         'HousekeepingService.processUser',
       );
 
       if (!user.token) {
         this.logger.log(
-          `No token found for user: ${user.email}`,
+          `No token found for user: ${user.username}`,
           'HousekeepingService.processUser',
         );
         return;
@@ -414,7 +414,7 @@ export class HousekeepingService {
     } catch (error) {
       stats.errors++;
       this.logger.logError(
-        `Error processing user: ${user.email}`,
+        `Error processing user: ${user.username}`,
         error,
         'HousekeepingService.processUser',
       );
@@ -430,7 +430,7 @@ export class HousekeepingService {
 
       if (vcListResponse.statusCode !== 200) {
         this.logger.logError(
-          `Failed to get VCs from provider for user: ${user.email}. Status: ${vcListResponse.statusCode}, Message: ${vcListResponse.message}`,
+          `Failed to get VCs from provider for user: ${user.username}. Status: ${vcListResponse.statusCode}, Message: ${vcListResponse.message}`,
           new Error(`Provider API error: ${vcListResponse.message || 'Unknown error'}`),
           'HousekeepingService.getVCsFromProvider',
         );
@@ -439,7 +439,7 @@ export class HousekeepingService {
 
       const vcIdentifiers = vcListResponse.data || [];
       this.logger.log(
-        `Found ${vcIdentifiers.length} VC identifiers from provider for user: ${user.email}`,
+        `Found ${vcIdentifiers.length} VC identifiers from provider for user: ${user.username}`,
         'HousekeepingService.getVCsFromProvider',
       );
 
@@ -453,7 +453,7 @@ export class HousekeepingService {
             user.token
           );
           let completeVCData = completeVC.data;
-          console.log("completeVCData", completeVCData);
+
           if (completeVCData && typeof completeVCData === 'object') {
             completeVCs.push(completeVCData);
           } else {
@@ -472,14 +472,14 @@ export class HousekeepingService {
       }
 
       this.logger.log(
-        `Successfully retrieved ${completeVCs.length} complete VCs from provider for user: ${user.email}`,
+        `Successfully retrieved ${completeVCs.length} complete VCs from provider for user: ${user.username}`,
         'HousekeepingService.getVCsFromProvider',
       );
 
       return completeVCs;
     } catch (error) {
       this.logger.logError(
-        `Error getting VCs from provider for user: ${user.email}`,
+        `Error getting VCs from provider for user: ${user.username}`,
         error,
         'HousekeepingService.getVCsFromProvider',
       );
@@ -494,7 +494,7 @@ export class HousekeepingService {
       } catch (error) {
         stats.errors++;
         this.logger.logError(
-          `Error processing VC: ${vcFromProvider.publicId} for user: ${user.email}`,
+          `Error processing VC: ${vcFromProvider.publicId} for user: ${user.username}`,
           error,
           'HousekeepingService.processVCsForUser',
         );
@@ -515,7 +515,7 @@ export class HousekeepingService {
     if (existingVC) {
       stats.existingVCsFound++;
       this.logger.log(
-        `VC already exists in database: ${vcFromProvider.publicId} for user: ${user.email}`,
+        `VC already exists in database: ${vcFromProvider.publicId} for user: ${user.id}`,
         'HousekeepingService.handleVCExistence',
       );
     } else {
@@ -536,7 +536,7 @@ export class HousekeepingService {
 
     await this.walletVCRepository.save(newVC);
     this.logger.log(
-      `Added new VC to database: ${vcFromProvider.publicId} for user: ${user.email}`,
+      `Added new VC to database: ${vcFromProvider.publicId} for user: ${user.username}`,
       'HousekeepingService.createNewVC',
     );
   }
@@ -572,7 +572,7 @@ export class HousekeepingService {
 
     await this.walletVCWatcherRepository.save(newWatcher);
     this.logger.log(
-      `Created new watcher for VC: ${vcFromProvider.publicId} with user: ${user.email}`,
+      `Created new watcher for VC: ${vcFromProvider.publicId} with user: ${user.username}`,
       'HousekeepingService.createNewWatcher',
     );
   }
