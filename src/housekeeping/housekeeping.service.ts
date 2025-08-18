@@ -508,13 +508,13 @@ export class HousekeepingService {
 
   private async handleVCExistence(vcFromProvider: any, user: any, stats: any, provider: string) {
     const existingVC = await this.walletVCRepository.findOne({
-      where: { vcPublicId: vcFromProvider.id, userId: user.id },
+      where: { vcPublicId: vcFromProvider.publicId, userId: user.id },
     });
 
     if (existingVC) {
       stats.existingVCsFound++;
       this.logger.log(
-        `VC already exists in database: ${vcFromProvider.id} for user: ${user.email}`,
+        `VC already exists in database: ${vcFromProvider.publicId} for user: ${user.email}`,
         'HousekeepingService.handleVCExistence',
       );
     } else {
@@ -525,7 +525,7 @@ export class HousekeepingService {
 
   private async createNewVC(vcFromProvider: any, user: any, provider: string) {
     const newVC = this.walletVCRepository.create({
-      vcPublicId: vcFromProvider.id,
+      vcPublicId: vcFromProvider.publicId,
       userId: user.id,
       provider: provider,
       vcJson: JSON.stringify(vcFromProvider),
@@ -535,20 +535,20 @@ export class HousekeepingService {
 
     await this.walletVCRepository.save(newVC);
     this.logger.log(
-      `Added new VC to database: ${vcFromProvider.id} for user: ${user.email}`,
+      `Added new VC to database: ${vcFromProvider.publicId} for user: ${user.email}`,
       'HousekeepingService.createNewVC',
     );
   }
 
   private async handleWatcherExistence(vcFromProvider: any, user: any, stats: any, provider: string) {
     const existingWatcher = await this.walletVCWatcherRepository.findOne({
-      where: { vcPublicId: vcFromProvider.id },
+      where: { vcPublicId: vcFromProvider.publicId },
     });
 
     if (existingWatcher) {
       stats.existingWatchersFound++;
       this.logger.log(
-        `Watcher already exists for VC: ${vcFromProvider.id}`,
+        `Watcher already exists for VC: ${vcFromProvider.publicId}`,
         'HousekeepingService.handleWatcherExistence',
       );
     } else {
@@ -559,7 +559,7 @@ export class HousekeepingService {
 
   private async createNewWatcher(vcFromProvider: any, user: any, provider: string) {
     const newWatcher = this.walletVCWatcherRepository.create({
-      vcPublicId: vcFromProvider.id,
+      vcPublicId: vcFromProvider.publicId,
       userId: user.id,
       provider: provider,
       watcherRegistered: false,
@@ -571,7 +571,7 @@ export class HousekeepingService {
 
     await this.walletVCWatcherRepository.save(newWatcher);
     this.logger.log(
-      `Created new watcher for VC: ${vcFromProvider.id} with user: ${user.email}`,
+      `Created new watcher for VC: ${vcFromProvider.publicId} with user: ${user.email}`,
       'HousekeepingService.createNewWatcher',
     );
   }
