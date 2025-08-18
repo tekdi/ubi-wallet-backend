@@ -511,30 +511,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         },
       );
 
-      const credentialsData = credentialsResponse.data as Credential[];
-
-      // Check if a credential with same ID already exists
-      const existingCredential = credentialsData.find((cred) => {
-        if (typeof cred.credentialVC === 'string') {
-          try {
-            const parsedCred = JSON.parse(cred.credentialVC);
-            return parsedCred.id === parsedVC.id;
-          } catch {
-            return false;
-          }
-        } else if (cred.credentialVC && typeof cred.credentialVC === 'object') {
-          return cred.credentialVC.id === parsedVC.id;
-        }
-        return false;
-      });
-
-      // if (existingCredential) {
-      //   return {
-      //     statusCode: 409,
-      //     message: 'This verifiable credential is already added to your wallet',
-      //   };
-      // }
-
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
@@ -812,9 +788,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     }
   }
 
-  async processCallback(
-    data: any,
-  ): Promise<{
+  async processCallback(data: any): Promise<{
     success: boolean;
     message: string;
     statusCode: number;
@@ -857,7 +831,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
 
       // Get user details to get the DID and token
       const user = await this.userService.findById(watcherRecord.userId);
-      if (!user || !user.did || !user.token) {
+      if (!user?.did || !user?.token) {
         return {
           success: false,
           message: 'User not found, DID not available, or no token',
