@@ -104,6 +104,7 @@ export class WalletController {
   @Post('vcs/watch/callback')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   watchCallback(@Body() data: WatchCallbackDto) {
+    console.log("====== Received callback data ======", data);
     return this.walletService.processWatchCallback(data);
   }
 }
