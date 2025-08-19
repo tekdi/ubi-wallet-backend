@@ -6,6 +6,7 @@ import { WalletVCWatcher } from '../wallet/wallet-vc-watcher.entity';
 import { User } from '../users/user.entity';
 import { LoggerService } from '../common/logger/logger.service';
 import { UserService } from '../users/user.service';
+import axios from 'axios';
 
 @Injectable()
 export class HousekeepingService {
@@ -410,7 +411,6 @@ export class HousekeepingService {
       stats.totalVCsFromProvider += vcsFromProvider.length;
       await this.processVCsForUser(vcsFromProvider, user, stats, provider);
       stats.usersProcessed++;
-
     } catch (error) {
       stats.errors++;
       this.logger.logError(
@@ -423,51 +423,69 @@ export class HousekeepingService {
 
   private async getVCsFromProvider(adapter: any, user: any) {
     try {
-      const vcListResponse = await Promise.race([
-        adapter.getAllVCs(user.accountId || user.id, user.token),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000)),
-      ]);
+      // Get the credentials using the provided token
+      const credentialsResponse = await axios.get(
+        `${process.env.DHIWAY_API_BASE}/api/v1/cred`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
 
-      if (vcListResponse.statusCode !== 200) {
+      if (credentialsResponse.status !== 200) {
         this.logger.logError(
-          `Failed to get VCs from provider for user: ${user.username}. Status: ${vcListResponse.statusCode}, Message: ${vcListResponse.message}`,
-          new Error(`Provider API error: ${vcListResponse.message || 'Unknown error'}`),
+          `Failed to get credentials from provider for user: ${user.username}. Status: ${credentialsResponse.status}`,
+          new Error(`Provider API error: Status ${credentialsResponse.status}`),
           'HousekeepingService.getVCsFromProvider',
         );
         return null;
       }
 
-      const vcIdentifiers = vcListResponse.data || [];
+      const vcList = credentialsResponse.data || [];
       this.logger.log(
-        `Found ${vcIdentifiers.length} VC identifiers from provider for user: ${user.username}`,
+        `Found ${vcList.length} VCs from provider for user: ${user.username}`,
         'HousekeepingService.getVCsFromProvider',
       );
 
-      // Get complete VCs for each identifier
+      // Get complete VCs for each publicId
       const completeVCs: any = [];
-      for (const vcIdentifier of vcIdentifiers) {
-        try {
-          const completeVC = await adapter.getVCJsonByVcIdentifier(
-            user.username,
-            vcIdentifier.identifier,
-            user.token
-          );
-          let completeVCData = completeVC.data;
+      for (const vc of vcList) {
+        if (vc.publicId) {
+          try {
+            // Fetch complete VC JSON using the .json endpoint
+            const vcResponse = await axios.get(
+              `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${vc.publicId}.json`,
+              { timeout: 10000 }
+            );
 
-          if (completeVCData && typeof completeVCData === 'object') {
-            completeVCs.push(completeVCData);
-          } else {
+            if (vcResponse.status === 200 && vcResponse.data) {
+              // Add the publicId to the VC data for reference
+              const completeVCData = {
+                ...vcResponse.data,
+                publicId: vc.publicId
+              };
+              completeVCs.push(completeVCData);
+            } else {
+              this.logger.log(
+                `Failed to get complete VC for publicId: ${vc.publicId}`,
+                'HousekeepingService.getVCsFromProvider',
+              );
+            }
+          } catch (vcError) {
             this.logger.log(
-              `Failed to get complete VC for identifier: ${vcIdentifier.identifier}`,
+              `Error getting complete VC for publicId: ${vc.publicId}`,
               'HousekeepingService.getVCsFromProvider',
             );
+            // Continue with other VCs even if one fails
           }
-        } catch (vcError) {
+        } else {
           this.logger.log(
-            `Error getting complete VC for identifier: ${vcIdentifier.identifier}`,
+            `VC missing publicId, skipping: ${JSON.stringify(vc)}`,
             'HousekeepingService.getVCsFromProvider',
           );
-          // Continue with other VCs even if one fails
         }
       }
 
@@ -513,14 +531,12 @@ export class HousekeepingService {
     });
 
     if (existingVC) {
-      console.log("existingVC===========", existingVC);
       stats.existingVCsFound++;
       this.logger.log(
         `VC already exists in database: ${vcFromProvider.publicId} for user: ${user.id}`,
         'HousekeepingService.handleVCExistence',
       );
     } else {
-      console.log("Newvc===========");
       await this.createNewVC(vcFromProvider, user, provider);
       stats.newVCsAdded++;
     }
