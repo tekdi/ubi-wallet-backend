@@ -815,13 +815,23 @@ console.log("walletVcJsonsFiltered========", walletVcJsonsFiltered);
       }
 
       const vcContent = vcContentResult.data!;
+      const vcData = (vcContent as any)?.details?.vc;
+
+      if (!vcData) {
+        return {
+          success: false,
+          message: 'No VC data found',
+          statusCode: 404,
+        };
+      }
 
       // Update VC in Dhiway wallet
       const walletUpdateResult = await this.updateVCInWallet(
-        vcContent?.details?.vc,
+        vcData,
         data.recordPublicId,
         user,
       );
+
       if (!walletUpdateResult.success) {
         return walletUpdateResult.error!;
       }
