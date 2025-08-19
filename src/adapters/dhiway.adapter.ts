@@ -818,7 +818,7 @@ console.log("walletVcJsonsFiltered========", walletVcJsonsFiltered);
 
       // Update VC in Dhiway wallet
       const walletUpdateResult = await this.updateVCInWallet(
-        vcContent,
+        vcContent?.details?.vc,
         data.recordPublicId,
         user,
       );
@@ -909,7 +909,7 @@ console.log("walletVcJsonsFiltered========", walletVcJsonsFiltered);
   }> {
     try {
       const vcResponse = await axios.get(
-        `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${recordPublicId}.vc`,
+        `${process.env.DHIWAY_VC_ISSUER_GET_VC_BASE_URI}/${recordPublicId}.json`,
         { timeout: 10000 },
       );
 
