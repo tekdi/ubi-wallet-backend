@@ -744,6 +744,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       );
 console.log("walletVcJsons========", walletVcJsons);
       const walletVcJsonsFiltered = walletVcJsons.filter((walletVC) => {
+        console.log("walletVcJsonsDetails========", walletVC?.details);
         return walletVC?.details?.vc?.id === vcIdentifier;
       });
 console.log("walletVcJsonsFiltered========", walletVcJsonsFiltered);
