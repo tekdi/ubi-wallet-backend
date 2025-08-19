@@ -49,6 +49,7 @@ interface ErrorWithMessage {
 interface Credential {
   id: string;
   active: boolean;
+  publicId: string;
   identifier: string;
   did: string;
   details?: {
