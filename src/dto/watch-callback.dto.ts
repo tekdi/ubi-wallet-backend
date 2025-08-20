@@ -11,13 +11,9 @@ export class WatchCallbackDto {
 
   @IsString()
   @IsOptional()
-  messageId?: string;
-
-  @IsObject()
-  @IsOptional()
-  data?: Record<string, unknown>;
+  type?: string;
 
   @IsString()
   @IsOptional()
-  timestamp?: string;
+  message?: string;
 }
