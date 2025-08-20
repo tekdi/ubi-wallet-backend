@@ -103,7 +103,9 @@ export class WalletController {
 
   @Post('vcs/watch/callback')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  watchCallback(@Body() data: WatchCallbackDto) {
+  async watchCallback(@Body() data: WatchCallbackDto) {
+    // Wait for 9 seconds to allow Dhiway update to complete
+    await new Promise((resolve) => setTimeout(resolve, 9000));
     return this.walletService.processWatchCallback(data);
   }
 }
