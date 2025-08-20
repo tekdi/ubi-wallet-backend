@@ -68,6 +68,57 @@ export class WalletVCWatcherService {
     }
   }
 
+  async updateWatcherForwardCallbackUrl(
+    vcPublicId: string,
+    userId: string | null,
+    provider: string,
+    watcherEmail: string,
+    forwardWatcherCallbackUrl: string,
+    updatedBy: string = '',
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // Find existing watcher
+      const whereCondition: Partial<{
+        vcPublicId: string;
+        userId: string | null;
+        provider: string;
+        watcherEmail: string;
+      }> = { vcPublicId, provider, watcherEmail };
+      if (userId !== null) {
+        whereCondition.userId = userId;
+      }
+
+      const existingWatcher = await this.walletVCWatcherRepository.findOne({
+        where: whereCondition as any,
+      });
+
+      if (!existingWatcher) {
+        return {
+          success: false,
+          message: `Watcher not found for vcPublicId: ${vcPublicId}, userId: ${userId}, watcherEmail: ${watcherEmail}`,
+        };
+      }
+
+      // Update only watcher forward callback URL
+      await this.walletVCWatcherRepository.update(whereCondition as any, {
+        forwardWatcherCallbackUrl,
+        updatedBy,
+      });
+
+      return {
+        success: true,
+        message: `Watcher forward callback URL updated successfully for VC: ${vcPublicId}`,
+      };
+    } catch (error) {
+      this.logger.logError(
+        'Failed to update watcher forward callback URL',
+        error,
+        'WalletVCWatcherService.updateWatcherForwardCallbackUrl',
+      );
+      throw error;
+    }
+  }
+
   async updateWatcherStatus(
     vcPublicId: string,
     userId: string | null,

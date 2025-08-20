@@ -371,6 +371,17 @@ export class WalletService {
             );
           }
 
+          if (forwardWatcherCallbackUrl) {
+            await this.walletVCWatcherService.updateWatcherForwardCallbackUrl(
+              data.vcPublicId,
+              user.id,
+              provider,
+              watcherEmail,
+              forwardWatcherCallbackUrl,
+              user.id,
+            );
+          }
+
           // Now update the watcher status
           const updateResult =
             await this.walletVCWatcherService.updateWatcherStatus(
