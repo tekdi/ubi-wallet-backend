@@ -831,6 +831,8 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         user,
       );
 
+      console.log('walletUpdateResult=========', walletUpdateResult);
+
       if (!walletUpdateResult.success) {
         return walletUpdateResult.error!;
       }
