@@ -502,8 +502,8 @@ export class WalletService {
 
   private async processAllCallbacks(watchers: any[], data: WatchCallbackDto) {
     const walletBackendUrl = process.env.WALLET_SERVICE_BASE_URL || '';
-    let forwardedCallbacks = 0;
-    let failedCallbacks = 0;
+    let externalCallbacksForwarded = 0;
+    let externalCallbacksFailed = 0;
 
     for (const watcher of watchers) {
       const result = await this.processSingleCallback(
@@ -511,14 +511,20 @@ export class WalletService {
         data,
         walletBackendUrl,
       );
-      if (result.success) {
-        forwardedCallbacks++;
-      } else {
-        failedCallbacks++;
+      if (result.externalForwarded) {
+        if (result.externalSuccess) {
+          externalCallbacksForwarded++;
+        } else {
+          externalCallbacksFailed++;
+        }
       }
     }
 
-    return { forwardedCallbacks, failedCallbacks };
+    return {
+      externalCallbacksForwarded,
+      externalCallbacksFailed,
+      totalWatchers: watchers.length,
+    };
   }
 
   private async processSingleCallback(
@@ -526,51 +532,56 @@ export class WalletService {
     data: WatchCallbackDto,
     walletBackendUrl: string,
   ) {
-    const callbackUrl =
-      watcher.forwardWatcherCallbackUrl?.trim() ||
-      watcher.watcherCallbackUrl?.trim();
+    let externalCallbackResult = { success: false, forwarded: false };
 
-    if (!callbackUrl) {
-      this.logger.log(
-        `No callback URL set for watcher: ${watcher.id}`,
-        'WalletService.processSingleCallback',
-      );
-      return { success: false };
-    }
+    // Process external callback forwarding if forwardWatcherCallbackUrl is set
+    if (watcher.forwardWatcherCallbackUrl?.trim()) {
+      const forwardCallbackUrl = watcher.forwardWatcherCallbackUrl.trim();
 
-    if (this.isWalletBackendUrl(callbackUrl, walletBackendUrl)) {
-      this.logger.log(
-        `Skipping callback forwarding to wallet backend URL: ${callbackUrl}`,
-        'WalletService.processSingleCallback',
-      );
-      return { success: false };
-    }
+      if (!this.isWalletBackendUrl(forwardCallbackUrl, walletBackendUrl)) {
+        try {
+          const response = await this.forwardCallbackToExternalUrl(
+            forwardCallbackUrl,
+            data,
+          );
 
-    try {
-      const response = await this.forwardCallbackToExternalUrl(callbackUrl, data);
-      
-      if (response.success) {
-        this.logger.log(
-          `Successfully forwarded callback to: ${callbackUrl}`,
-          'WalletService.processSingleCallback',
-        );
-        return { success: true };
+          if (response.success) {
+            this.logger.log(
+              `Successfully forwarded callback to external URL: ${forwardCallbackUrl}`,
+              'WalletService.processSingleCallback',
+            );
+            externalCallbackResult = { success: true, forwarded: true };
+          } else {
+            this.logger.logError(
+              `Failed to forward callback to external URL: ${forwardCallbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
+              new Error(response.message),
+              'WalletService.processSingleCallback',
+            );
+            externalCallbackResult = { success: false, forwarded: false };
+          }
+        } catch (error) {
+          this.logger.logError(
+            `Error forwarding callback to external URL: ${forwardCallbackUrl}`,
+            error,
+            'WalletService.processSingleCallback',
+          );
+          externalCallbackResult = { success: false, forwarded: false };
+        }
       } else {
-        this.logger.logError(
-          `Failed to forward callback to: ${callbackUrl}. Status: ${response.statusCode}, Message: ${response.message}`,
-          new Error(response.message),
+        this.logger.log(
+          `Skipping external callback forwarding to wallet backend URL: ${forwardCallbackUrl}`,
           'WalletService.processSingleCallback',
         );
-        return { success: false };
       }
-    } catch (error) {
-      this.logger.logError(
-        `Error forwarding callback to: ${callbackUrl}`,
-        error,
-        'WalletService.processSingleCallback',
-      );
-      return { success: false };
     }
+
+    // Always return success for wallet processing (external forwarding is optional)
+    // The actual wallet processing happens in processAdapterCallback which is called separately
+    return {
+      success: true,
+      externalForwarded: externalCallbackResult.forwarded,
+      externalSuccess: externalCallbackResult.success,
+    };
   }
 
   private isWalletBackendUrl(
