@@ -982,7 +982,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         { headers: this.getAuthHeaders(this.apiKey) },
       );
 
-      console.log('messagePayload=========', messagePayload);
+      console.log('messagePayload=========', JSON.stringify(messagePayload));
       console.log(
         'url=========',
         `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
