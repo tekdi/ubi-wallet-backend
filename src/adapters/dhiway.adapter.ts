@@ -831,8 +831,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         user,
       );
 
-      console.log('walletUpdateResult=========', walletUpdateResult);
-
       if (!walletUpdateResult.success) {
         return walletUpdateResult.error!;
       }
@@ -981,13 +979,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         messagePayload,
         { headers: this.getAuthHeaders(this.apiKey) },
       );
-
-      console.log('messagePayload=========', JSON.stringify(messagePayload));
-      console.log(
-        'url=========',
-        `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
-      );
-      console.log('apikey=========', this.apiKey);
 
       const messageData = messageResponse.data as ApiResponse;
       if (messageData.success !== true) {
