@@ -469,18 +469,11 @@ export class WalletService {
         );
       }
 
-      // Process callbacks
+      // Process callbacks (includes both external forwarding and wallet processing for each watcher)
       const callbackResults = await this.processAllCallbacks(watchers, data);
 
-      // Process with adapter
-      const adapterResults = await this.processAdapterCallback(data);
-
       // Create success response
-      return this.createSuccessResponse(
-        data.recordPublicId,
-        callbackResults,
-        adapterResults,
-      );
+      return this.createSuccessResponse(data.recordPublicId, callbackResults);
     } catch (error) {
       this.logger.logError(
         'Failed to process watch callback',
@@ -504,21 +497,38 @@ export class WalletService {
     const walletBackendUrl = process.env.WALLET_SERVICE_BASE_URL || '';
     let forwardedCallbacks = 0;
     let failedCallbacks = 0;
+    let walletProcessedCallbacks = 0;
+    let walletFailedCallbacks = 0;
 
     for (const watcher of watchers) {
-      const result = await this.processSingleCallback(
+      // Process external callback forwarding
+      const externalResult = await this.processSingleCallback(
         watcher,
         data,
         walletBackendUrl,
       );
-      if (result.success) {
+      if (externalResult.success) {
         forwardedCallbacks++;
       } else {
         failedCallbacks++;
       }
+
+      // Process wallet callback for each watcher
+      const walletResult = await this.processAdapterCallback(data, watcher);
+      if (walletResult.success) {
+        walletProcessedCallbacks++;
+      } else {
+        walletFailedCallbacks++;
+      }
     }
 
-    return { forwardedCallbacks, failedCallbacks };
+    return {
+      forwardedCallbacks,
+      failedCallbacks,
+      walletProcessedCallbacks,
+      walletFailedCallbacks,
+      totalWatchers: watchers.length,
+    };
   }
 
   private async processSingleCallback(
@@ -580,7 +590,7 @@ export class WalletService {
     return !walletBackendUrl || callbackUrl.includes(walletBackendUrl);
   }
 
-  private async processAdapterCallback(data: WatchCallbackDto) {
+  private async processAdapterCallback(data: WatchCallbackDto, watcher?: any) {
     if (typeof this.walletAdapter.processCallback !== 'function') {
       this.logger.log(
         'Wallet adapter does not support processCallback method',
@@ -591,21 +601,28 @@ export class WalletService {
 
     try {
       this.logger.log(
-        'Processing callback with wallet adapter',
+        `Processing callback with wallet adapter for watcher: ${watcher?.id || 'unknown'}`,
         'WalletService.processAdapterCallback',
       );
 
-      const adapterResult = await this.walletAdapter.processCallback(data);
+      // Pass watcher information to the adapter if needed
+      const adapterData = {
+        ...data,
+        watcherId: watcher?.id,
+        userId: watcher?.userId,
+      };
+
+      const adapterResult = await this.walletAdapter.processCallback(adapterData);
 
       if (adapterResult.success) {
         this.logger.log(
-          `Successfully processed callback with wallet adapter: ${adapterResult.message}`,
+          `Successfully processed callback with wallet adapter for watcher ${watcher?.id || 'unknown'}: ${adapterResult.message}`,
           'WalletService.processAdapterCallback',
         );
         return { success: true, processed: true };
       } else {
         this.logger.logError(
-          `Failed to process callback with wallet adapter: ${adapterResult.message}`,
+          `Failed to process callback with wallet adapter for watcher ${watcher?.id || 'unknown'}: ${adapterResult.message}`,
           new Error(adapterResult.message),
           'WalletService.processAdapterCallback',
         );
@@ -613,7 +630,7 @@ export class WalletService {
       }
     } catch (error) {
       this.logger.logError(
-        'Error processing callback with wallet adapter',
+        `Error processing callback with wallet adapter for watcher ${watcher?.id || 'unknown'}`,
         error,
         'WalletService.processAdapterCallback',
       );
@@ -640,13 +657,18 @@ export class WalletService {
   private createSuccessResponse(
     recordPublicId: string,
     callbackResults: any,
-    adapterResults: any,
   ) {
-    const { forwardedCallbacks, failedCallbacks } = callbackResults;
-    const adapterProcessedCallbacks = adapterResults.processed ? 1 : 0;
-    const totalProcessed = forwardedCallbacks + adapterProcessedCallbacks;
+    const { 
+      forwardedCallbacks, 
+      failedCallbacks, 
+      walletProcessedCallbacks, 
+      walletFailedCallbacks,
+      totalWatchers 
+    } = callbackResults;
+    
+    const totalProcessed = forwardedCallbacks + walletProcessedCallbacks;
 
-    const message = `Watch callback processed successfully. Forwarded: ${forwardedCallbacks}, Adapter processed: ${adapterProcessedCallbacks}, Failed: ${failedCallbacks}`;
+    const message = `Watch callback processed successfully. External forwarded: ${forwardedCallbacks}, Wallet processed: ${walletProcessedCallbacks}, External failed: ${failedCallbacks}, Wallet failed: ${walletFailedCallbacks}, Total watchers: ${totalWatchers}`;
 
     this.logger.log(message, 'WalletService.createSuccessResponse');
 
@@ -657,9 +679,11 @@ export class WalletService {
         processed: true,
         timestamp: new Date().toISOString(),
         recordPublicId,
-        forwardedCallbacks,
-        adapterProcessedCallbacks,
-        failedCallbacks,
+        externalForwardedCallbacks: forwardedCallbacks,
+        externalFailedCallbacks: failedCallbacks,
+        walletProcessedCallbacks,
+        walletFailedCallbacks,
+        totalWatchers,
         totalProcessed,
       },
     };
