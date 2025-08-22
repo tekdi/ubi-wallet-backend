@@ -504,7 +504,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         type: 'document',
       });
 
-      console.log('messagePayload=uploadVCFromQR', messagePayload);
+      console.log('messagePayload=uploadVCFromQR', JSON.stringify(messagePayload));
       console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`);
       console.log('API Key', this.apiKey);
 
@@ -979,7 +979,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     });
 
     console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`);
-    console.log('messagePayload', messagePayload);
+    console.log('messagePayload=updateVCInWallet', JSON.stringify(messagePayload));
     console.log('API Key', this.apiKey);
 
     try {
