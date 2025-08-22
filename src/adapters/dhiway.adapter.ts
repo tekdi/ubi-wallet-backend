@@ -798,7 +798,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       if (!validationResult.isValid) {
         return validationResult.error!;
       }
-console.log("data=========", data);
+
       // Get watcher record and user
       const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.user_id);
       if (!watcherAndUser.success) {
@@ -823,7 +823,7 @@ console.log("data=========", data);
           statusCode: 404,
         };
       }
-
+console.log("vcData=========", JSON.stringify(vcData));
       // Update VC in Dhiway wallet
       const walletUpdateResult = await this.updateVCInWallet(
         vcData,
