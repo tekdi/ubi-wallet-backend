@@ -503,7 +503,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         detailsUser: 'custom',
         type: 'document',
       });
-console.log("messagePayload=========", messagePayload);
+console.log("messagePayload=========", JSON.stringify(messagePayload));
 console.log("url=========", `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`);
 console.log("apiKey=========", this.apiKey);
       // Create a message with the VC
@@ -800,7 +800,7 @@ console.log("apiKey=========", this.apiKey);
       if (!validationResult.isValid) {
         return validationResult.error!;
       }
-      console.log("data_user_id=========", data.user_id);
+      console.log("data=========", data);
       // Get watcher record and user
       const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.user_id);
       if (!watcherAndUser.success) {
@@ -978,7 +978,7 @@ console.log("apiKey=========", this.apiKey);
       detailsUser: 'custom',
       type: 'document',
     });
-console.log("messagePayload=========", messagePayload);
+console.log("messagePayload=========", JSON.stringify(messagePayload));
 console.log("url=========", `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`);
 console.log("apiKey=========", this.apiKey);
     try {
