@@ -598,7 +598,7 @@ export class WalletService {
       );
       return { success: false, processed: false };
     }
-
+console.log("watcher=========", watcher);
     try {
       this.logger.log(
         `Processing callback with wallet adapter for watcher: ${watcher?.id || 'unknown'}`,
