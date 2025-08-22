@@ -871,7 +871,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     error?: { success: boolean; message: string; statusCode: number; data?: any };
   }> {
     const watcherRecord = await this.walletVCWatcherRepository.findOne({
-      where: { vcPublicId: recordPublicId, user_id: user_id},
+      where: { vcPublicId: recordPublicId, userId: user_id},
     });
 
     if (!watcherRecord) {
