@@ -802,7 +802,7 @@ console.log("apiKey=========", this.apiKey);
       }
       console.log("data=========", data);
       // Get watcher record and user
-      const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.user_id);
+      const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.userId);
       if (!watcherAndUser.success) {
         return watcherAndUser.error!;
       }
