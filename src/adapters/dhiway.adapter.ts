@@ -503,9 +503,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         detailsUser: 'custom',
         type: 'document',
       });
-console.log("messagePayload=========", JSON.stringify(messagePayload));
-console.log("url=========", `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`);
-console.log("apiKey=========", this.apiKey);
+
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
@@ -800,7 +798,7 @@ console.log("apiKey=========", this.apiKey);
       if (!validationResult.isValid) {
         return validationResult.error!;
       }
-      console.log("data=========", data);
+
       // Get watcher record and user
       const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.userId);
       if (!watcherAndUser.success) {
@@ -808,7 +806,6 @@ console.log("apiKey=========", this.apiKey);
       }
 
       const { user } = watcherAndUser.data!;
-      console.log("user=========", user);
 
       // Get VC content
       const vcContentResult = await this.getVCContent(data.recordPublicId);
@@ -978,9 +975,7 @@ console.log("apiKey=========", this.apiKey);
       detailsUser: 'custom',
       type: 'document',
     });
-console.log("messagePayload=========", JSON.stringify(messagePayload));
-console.log("url=========", `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`);
-console.log("apiKey=========", this.apiKey);
+
     try {
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
