@@ -504,6 +504,10 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         type: 'document',
       });
 
+      console.log('messagePayload=uploadVCFromQR', messagePayload);
+      console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`);
+      console.log('API Key', this.apiKey);
+
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
@@ -512,6 +516,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           headers: this.getAuthHeaders(this.apiKey),
         },
       );
+      console.log('messageResponse', messageResponse);
 
       const messageData = messageResponse.data as ApiResponse;
 
@@ -973,12 +978,17 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       type: 'document',
     });
 
+    console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`);
+    console.log('messagePayload', messagePayload);
+    console.log('API Key', this.apiKey);
+
     try {
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
         messagePayload,
         { headers: this.getAuthHeaders(this.apiKey) },
       );
+      console.log('messageResponse', messageResponse);
 
       const messageData = messageResponse.data as ApiResponse;
       if (messageData.success !== true) {
