@@ -800,7 +800,7 @@ console.log("apiKey=========", this.apiKey);
       if (!validationResult.isValid) {
         return validationResult.error!;
       }
-
+      console.log("data_user_id=========", data.user_id);
       // Get watcher record and user
       const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.user_id);
       if (!watcherAndUser.success) {
@@ -808,6 +808,7 @@ console.log("apiKey=========", this.apiKey);
       }
 
       const { user } = watcherAndUser.data!;
+      console.log("user=========", user);
 
       // Get VC content
       const vcContentResult = await this.getVCContent(data.recordPublicId);
