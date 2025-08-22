@@ -504,10 +504,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
         type: 'document',
       });
 
-      console.log('messagePayload=uploadVCFromQR', JSON.stringify(messagePayload));
-      console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`);
-      console.log('API Key', this.apiKey);
-
       // Create a message with the VC
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${did}`,
@@ -516,7 +512,6 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
           headers: this.getAuthHeaders(this.apiKey),
         },
       );
-      console.log('messageResponse', messageResponse);
 
       const messageData = messageResponse.data as ApiResponse;
 
@@ -805,7 +800,7 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       }
 
       // Get watcher record and user
-      const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId);
+      const watcherAndUser = await this.getWatcherAndUser(data.recordPublicId, data.user_id);
       if (!watcherAndUser.success) {
         return watcherAndUser.error!;
       }
@@ -867,13 +862,16 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
     return { isValid: true };
   }
 
-  private async getWatcherAndUser(recordPublicId: string): Promise<{
+  private async getWatcherAndUser(
+    recordPublicId: string,
+    user_id: string,
+  ): Promise<{
     success: boolean;
     data?: { user: any };
     error?: { success: boolean; message: string; statusCode: number; data?: any };
   }> {
     const watcherRecord = await this.walletVCWatcherRepository.findOne({
-      where: { vcPublicId: recordPublicId },
+      where: { vcPublicId: recordPublicId, userId: user_id},
     });
 
     if (!watcherRecord) {
@@ -978,17 +976,12 @@ export class DhiwayAdapter implements IWalletAdapterWithOtp {
       type: 'document',
     });
 
-    console.log('url', `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`);
-    console.log('messagePayload=updateVCInWallet', JSON.stringify(messagePayload));
-    console.log('API Key', this.apiKey);
-
     try {
       const messageResponse = await axios.post(
         `${this.dhiwayBaseUrl}/api/v1/message/create/${user.did}`,
         messagePayload,
         { headers: this.getAuthHeaders(this.apiKey) },
       );
-      console.log('messageResponse', messageResponse);
 
       const messageData = messageResponse.data as ApiResponse;
       if (messageData.success !== true) {
